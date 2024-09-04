@@ -4602,8 +4602,9 @@ void tst_QNetworkReply::ioGetFromHttpWithCache_data()
     // Set must-revalidate now
     //
     rawHeaders.clear();
+    content.first.setExpirationDate(future);
     rawHeaders << QNetworkCacheMetaData::RawHeader("Date", QLocale::c().toString(past, dateFormat).toLatin1())
-            << QNetworkCacheMetaData::RawHeader("Cache-control", "max-age=7200, must-revalidate"); // must-revalidate is used
+            << QNetworkCacheMetaData::RawHeader("Cache-control", "max-age=3600, must-revalidate"); // must-revalidate is used
     content.first.setRawHeaders(rawHeaders);
 
     QTest::newRow("must-revalidate,200,always-network")
@@ -4611,15 +4612,42 @@ void tst_QNetworkReply::ioGetFromHttpWithCache_data()
     QTest::newRow("must-revalidate,200,prefer-network")
             << reply200 << "Reloaded" << content << int(QNetworkRequest::PreferNetwork) << QStringList() << false << true;
     QTest::newRow("must-revalidate,200,prefer-cache")
-            << reply200 << "Reloaded" << content << int(QNetworkRequest::PreferCache) << QStringList() << false << true;
+            << reply200 << "Not-reloaded" << content << int(QNetworkRequest::PreferCache) << QStringList() << true << false;
     QTest::newRow("must-revalidate,200,always-cache")
-            << reply200 << "" << content << int(QNetworkRequest::AlwaysCache) << QStringList() << false << false;
+            << reply200 << "Not-reloaded" << content << int(QNetworkRequest::AlwaysCache) << QStringList() << true << false;
 
     QTest::newRow("must-revalidate,304,prefer-network")
             << reply304 << "Not-reloaded" << content << int(QNetworkRequest::PreferNetwork) << QStringList() << true << true;
     QTest::newRow("must-revalidate,304,prefer-cache")
-            << reply304 << "Not-reloaded" << content << int(QNetworkRequest::PreferCache) << QStringList() << true << true;
+            << reply304 << "Not-reloaded" << content << int(QNetworkRequest::PreferCache) << QStringList() << true << false;
     QTest::newRow("must-revalidate,304,always-cache")
+            << reply304 << "Not-reloaded" << content << int(QNetworkRequest::AlwaysCache) << QStringList() << true << false;
+
+    //
+    // Set must-revalidate, but also add Age, meaning a 3rd party (i.e. proxy) held on to the
+    // response for some time
+    //
+    rawHeaders.clear();
+    content.first.setExpirationDate(past);
+    rawHeaders << QNetworkCacheMetaData::RawHeader("Cache-control", "max-age=3600, must-revalidate")
+               // Some 3rd party held on to the response long enough that it expired:
+               << QNetworkCacheMetaData::RawHeader("Age", "3600");
+    content.first.setRawHeaders(rawHeaders);
+
+    QTest::newRow("must-revalidate,200,always-network,expired")
+            << reply200 << "Reloaded" << content << int(QNetworkRequest::AlwaysNetwork) << QStringList() << false << true;
+    QTest::newRow("must-revalidate,200,prefer-network,expired")
+            << reply200 << "Reloaded" << content << int(QNetworkRequest::PreferNetwork) << QStringList() << false << true;
+    QTest::newRow("must-revalidate,200,prefer-cache,expired")
+            << reply200 << "Reloaded" << content << int(QNetworkRequest::PreferCache) << QStringList() << false << true;
+    QTest::newRow("must-revalidate,200,always-cache,expired")
+            << reply200 << "" << content << int(QNetworkRequest::AlwaysCache) << QStringList() << false << false;
+
+    QTest::newRow("must-revalidate,304,prefer-network,expired")
+            << reply304 << "Not-reloaded" << content << int(QNetworkRequest::PreferNetwork) << QStringList() << true << true;
+    QTest::newRow("must-revalidate,304,prefer-cache,expired")
+            << reply304 << "Not-reloaded" << content << int(QNetworkRequest::PreferCache) << QStringList() << true << true;
+    QTest::newRow("must-revalidate,304,always-cache,expired")
             << reply304 << "" << content << int(QNetworkRequest::AlwaysCache) << QStringList() << false << false;
 
     //
@@ -4677,7 +4705,15 @@ void tst_QNetworkReply::ioGetFromHttpWithCache()
 
     QVERIFY(waitForFinish(reply) != Timeout);
 
+    QEXPECT_FAIL("must-revalidate,200,always-cache",
+                 "We assume the response is stale even though it is not", Abort);
+    QEXPECT_FAIL("must-revalidate,304,always-cache",
+                 "We assume the response is stale even though it is not", Abort);
+    QEXPECT_FAIL("must-revalidate,200,prefer-network",
+                 "PreferNetwork doesn't prefer network", Abort);
     QTEST(reply->attribute(QNetworkRequest::SourceIsFromCacheAttribute).toBool(), "loadedFromCache");
+    QEXPECT_FAIL("must-revalidate,304,prefer-network",
+                 "PreferNetwork doesn't prefer network", Abort);
     QTEST(server.totalConnections > 0, "networkUsed");
     QFETCH(QString, body);
     QCOMPARE(reply->readAll().constData(), qPrintable(body));
