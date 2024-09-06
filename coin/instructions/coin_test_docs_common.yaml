@@ -14,6 +14,12 @@ instructions:
     command: "cp -rfs /opt/qt-doctools/. {{.InstallDir}}"
     userMessageOnFailure: >
       Failed to create links to provisioned binaries.
+    enable_if:
+      condition: property
+      property: features
+      not_contains_value: "DocsGenerationV2"
+
+  - !include "{{qt/qtbase}}/coin_fetch_doc_tools.yaml"
 
   - !include "{{qt/qtbase}}/prepare_building_env.yaml"
 
