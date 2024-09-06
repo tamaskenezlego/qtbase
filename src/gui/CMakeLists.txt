@@ -940,6 +940,11 @@ if (QT_FEATURE_vulkan)
             "${QT_HOST_PATH}"
             "${QT${PROJECT_VERSION_MAJOR}_HOST_INFO_LIBEXECDIR}"
             "qvkgen${host_executable_suffix}")
+    elseif(QT_OPTIONAL_TOOLS_PATH)
+        qt_path_join(qvkgen
+            "${QT_OPTIONAL_TOOLS_PATH}"
+            "${INSTALL_LIBEXECDIR}"
+            "qvkgen${host_executable_suffix}")
     else()
         set(qvkgen "${QT_CMAKE_EXPORT_NAMESPACE}::qvkgen")
     endif()
