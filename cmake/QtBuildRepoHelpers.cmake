@@ -308,6 +308,7 @@ macro(qt_build_repo_begin)
     if(NOT TARGET host_tools)
         add_custom_target(host_tools)
         add_custom_target(bootstrap_tools)
+        add_custom_target(doc_tools)
 
         # TODO: Investigate complexity of installing tools for shared builds.
         # Currently installing host tools without libraries only really makes sense for static
@@ -321,9 +322,21 @@ macro(qt_build_repo_begin)
                 COMMAND ${CMAKE_COMMAND}
                     --install ${CMAKE_BINARY_DIR} --component host_tools --strip
             )
+
+            add_custom_target(install_doc_tools
+                COMMAND ${CMAKE_COMMAND}
+                    --install ${CMAKE_BINARY_DIR} --component doc_tools
+            )
+            add_custom_target(install_doc_tools_stripped
+                COMMAND ${CMAKE_COMMAND}
+                    --install ${CMAKE_BINARY_DIR} --component doc_tools --strip
+            )
+
             if(NOT QT_INTERNAL_NO_INSTALL_TOOLS_BUILD_DEPS)
                 add_dependencies(install_tools host_tools)
                 add_dependencies(install_tools_stripped host_tools)
+                add_dependencies(install_doc_tools doc_tools)
+                add_dependencies(install_doc_tools_stripped doc_tools)
             endif()
         endif()
     endif()
