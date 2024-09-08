@@ -215,7 +215,9 @@ function(qt_internal_add_tool target_name)
         qt_get_cmake_configurations(cmake_configs)
 
         set(install_initial_call_args
-            EXPORT "${INSTALL_CMAKE_NAMESPACE}${arg_TOOLS_TARGET}ToolsTargets")
+            EXPORT "${INSTALL_CMAKE_NAMESPACE}${arg_TOOLS_TARGET}ToolsTargets"
+            COMPONENT host_tools
+        )
 
         foreach(cmake_config ${cmake_configs})
             qt_get_install_target_default_args(
