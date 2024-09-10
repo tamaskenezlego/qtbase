@@ -1433,6 +1433,8 @@ void QWindows11Style::drawControl(ControlElement element, const QStyleOption *op
         if (const QStyleOptionButton *btn = qstyleoption_cast<const QStyleOptionButton *>(option))  {
             if (btn->features.testFlag(QStyleOptionButton::Flat)) {
                 painter->setPen(Qt::NoPen);
+                painter->setBrush(btn->palette.button());
+                painter->drawRoundedRect(rect, secondLevelRoundingRadius, secondLevelRoundingRadius);
                 if (flags & (State_Sunken | State_On)) {
                     painter->setBrush(WINUI3Colors[colorSchemeIndex][subtlePressedColor]);
                 }
@@ -2154,6 +2156,10 @@ void QWindows11Style::polish(QWidget* widget)
     } else if (widget->inherits("QAbstractButton") || widget->inherits("QToolButton")) {
         widget->setAutoFillBackground(false);
         auto pal = widget->palette();
+        if (QPushButton *btn = qobject_cast<QPushButton*>(widget)) {
+            if (btn->isFlat() && !pal.isBrushSet(QPalette::Active, QPalette::Button))
+                pal.setColor(QPalette::Active, QPalette::Button, pal.window().color());
+        }
         if (colorSchemeIndex == 0) {
             pal.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(0x00,0x00,0x00,0x5C));
             pal.setColor(QPalette::Disabled, QPalette::Button, QColor(0xF9,0xF9,0xF9,0x4D));
