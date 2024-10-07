@@ -281,7 +281,7 @@ class LocaleScanner (object):
         yield 'currencySymbol', symbol
         yield 'currencyDisplayName', name
 
-    def numericData(self, lookup, complain = lambda text: None):
+    def numericData(self, lookup):
         """Generate assorted numeric data for the locale.
 
         First argument, lookup, is a callable that maps a numbering
