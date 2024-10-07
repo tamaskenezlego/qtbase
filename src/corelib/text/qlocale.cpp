@@ -3705,11 +3705,18 @@ QString QCalendarBackend::dateTimeToString(QStringView format, const QDateTime &
                         QTimeZone::NameType mode =
                             type == Short ? QTimeZone::ShortName
                             : type == Long ? QTimeZone::LongName : QTimeZone::OffsetName;
-                        return when.timeRepresentation().displayName(when, mode, locale);
+                        QString text = when.timeRepresentation().displayName(when, mode, locale);
+                        if (!text.isEmpty())
+                            return text;
+                        // else fall back to an unlocalized one if we can manage it:
                     } // else: prefer QDateTime's abbreviation, for backwards-compatibility.
 #endif // else, make do with non-localized abbreviation:
-                    if (type != Offset)
-                        return when.timeZoneAbbreviation();
+                    if (type != Offset) {
+                        QString text = when.timeZoneAbbreviation();
+                        if (!text.isEmpty())
+                            return text;
+                        // else fall back to Offset version:
+                    }
                     // For Offset, we can coerce to a UTC-based zone's abbreviation:
                     return when.toOffsetFromUtc(when.offsetFromUtc()).timeZoneAbbreviation();
                 };
@@ -3725,16 +3732,21 @@ QString QCalendarBackend::dateTimeToString(QStringView format, const QDateTime &
                 case 3: // ±hh:mm
                 case 2: // ±hhmm (we'll remove the ':' at the end)
                     text = tzAbbr(when, Offset);
-                    Q_ASSERT(text.startsWith("UTC"_L1)); // Need to strip this.
-                    // The Qt::UTC case omits the zero offset:
-                    text = (text.size() == 3
-                            ? u"+00:00"_s
-                            : (text.size() <= 6
-                               // Whole-hour offsets may lack the zero minutes:
-                               ? QStringView{text}.sliced(3) + ":00"_L1
-                               : std::move(text).sliced(3)));
-                    if (repeat == 2)
-                        text = text.remove(u':');
+                    if (!text.isEmpty()) {
+                        QStringView tail{text};
+                        // May need to strip a prefix:
+                        if (tail.startsWith("UTC"_L1) || tail.startsWith("GMT"_L1))
+                            tail = tail.sliced(3);
+                        // TODO: there may be a locale-specific alternative prefix.
+                        text = (tail.isEmpty() // The Qt::UTC case omits the zero offset:
+                                ? u"+00:00"_s
+                                // Whole-hour offsets may lack the zero minutes:
+                                : (tail.size() <= 3
+                                   ? tail + ":00"_L1
+                                   : std::move(text).right(tail.size())));
+                        if (repeat == 2)
+                            text.remove(u':');
+                    } // else: no suitable representation of the zone.
                     break;
                 default:
                     text = tzAbbr(when, Short);
