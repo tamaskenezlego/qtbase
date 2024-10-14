@@ -23,6 +23,7 @@ QT_WARNING_DISABLE_GCC("-Wfree-nonheap-object") // false positive tracking
 
 #include "qplatformdefs.h"
 
+#include "qcalendar.h"
 #include "qdatastream.h"
 #include "qdebug.h"
 #include "qhashfunctions.h"
@@ -56,7 +57,6 @@ QT_WARNING_DISABLE_GCC("-Wfree-nonheap-object") // false positive tracking
 
 #include "private/qcalendarbackend_p.h"
 #include "private/qgregoriancalendar_p.h"
-#include "qcalendar.h"
 
 #include <q20iterator.h>
 
@@ -3527,6 +3527,41 @@ QString QLocale::pmText() const
     return d->m_data->postMeridiem().getData(pm_data);
 }
 
+// For the benefit of QCalendar, below.
+static QString offsetFromAbbreviation(QString &&text)
+{
+    QStringView tail{text};
+    // May need to strip a prefix:
+    if (tail.startsWith("UTC"_L1) || tail.startsWith("GMT"_L1))
+        tail = tail.sliced(3);
+    // TODO: there may be a locale-specific alternative prefix.
+    // Hard to know without zone-name L10n details, though.
+    return (tail.isEmpty() // The Qt::UTC case omits the zero offset:
+            ? u"+00:00"_s
+            // Whole-hour offsets may lack the zero minutes:
+            : (tail.size() <= 3
+               ? tail + ":00"_L1
+               : std::move(text).right(tail.size())));
+}
+
+static QString zoneOffsetFormat([[maybe_unused]] const QLocale &locale,
+                                const QDateTime &when,
+                                int offsetSeconds)
+{
+    QString text =
+#if QT_CONFIG(timezone)
+        locale != QLocale::system()
+        ? when.timeRepresentation().displayName(when, QTimeZone::OffsetName, locale)
+        :
+#endif
+        when.toOffsetFromUtc(offsetSeconds).timeZoneAbbreviation();
+
+    if (!text.isEmpty())
+        text = offsetFromAbbreviation(std::move(text));
+    // else: no suitable representation of the zone.
+    return text;
+}
+
 // Another intrusion from QCalendar, using some of the tools above:
 
 QString QCalendarBackend::dateTimeToString(QStringView format, const QDateTime &datetime,
@@ -3700,26 +3735,32 @@ QString QCalendarBackend::dateTimeToString(QStringView format, const QDateTime &
             case 't': {
                 enum AbbrType { Long, Offset, Short };
                 const auto tzAbbr = [locale](const QDateTime &when, AbbrType type) {
+                    QString text;
+                    if (type == Offset) {
+                        text = zoneOffsetFormat(locale, when, when.offsetFromUtc());
+                        // When using timezone_locale data, this should always succeed:
+                        if (!text.isEmpty())
+                            return text;
+                    }
 #if QT_CONFIG(timezone)
                     if (type != Short || locale != QLocale::system()) {
                         QTimeZone::NameType mode =
                             type == Short ? QTimeZone::ShortName
                             : type == Long ? QTimeZone::LongName : QTimeZone::OffsetName;
-                        QString text = when.timeRepresentation().displayName(when, mode, locale);
+                        text = when.timeRepresentation().displayName(when, mode, locale);
                         if (!text.isEmpty())
                             return text;
                         // else fall back to an unlocalized one if we can manage it:
                     } // else: prefer QDateTime's abbreviation, for backwards-compatibility.
 #endif // else, make do with non-localized abbreviation:
-                    if (type != Offset) {
-                        QString text = when.timeZoneAbbreviation();
-                        if (!text.isEmpty())
-                            return text;
-                        // else fall back to Offset version:
-                    }
-                    // For Offset, we can coerce to a UTC-based zone's abbreviation:
-                    return when.toOffsetFromUtc(when.offsetFromUtc()).timeZoneAbbreviation();
+                    // Absent timezone_locale data, Offset might still reach here:
+                    if (type == Offset) // Our prior failure might not have tried this:
+                        text = when.toOffsetFromUtc(when.offsetFromUtc()).timeZoneAbbreviation();
+                    if (text.isEmpty()) // Notably including type != Offset
+                        text = when.timeZoneAbbreviation();
+                    return type == Offset ? offsetFromAbbreviation(std::move(text)) : text;
                 };
+
                 used = true;
                 repeat = qMin(repeat, 4);
                 // If we don't have a date-time, use the current system time:
@@ -3732,21 +3773,8 @@ QString QCalendarBackend::dateTimeToString(QStringView format, const QDateTime &
                 case 3: // ±hh:mm
                 case 2: // ±hhmm (we'll remove the ':' at the end)
                     text = tzAbbr(when, Offset);
-                    if (!text.isEmpty()) {
-                        QStringView tail{text};
-                        // May need to strip a prefix:
-                        if (tail.startsWith("UTC"_L1) || tail.startsWith("GMT"_L1))
-                            tail = tail.sliced(3);
-                        // TODO: there may be a locale-specific alternative prefix.
-                        text = (tail.isEmpty() // The Qt::UTC case omits the zero offset:
-                                ? u"+00:00"_s
-                                // Whole-hour offsets may lack the zero minutes:
-                                : (tail.size() <= 3
-                                   ? tail + ":00"_L1
-                                   : std::move(text).right(tail.size())));
-                        if (repeat == 2)
-                            text.remove(u':');
-                    } // else: no suitable representation of the zone.
+                    if (repeat == 2)
+                        text.remove(u':');
                     break;
                 default:
                     text = tzAbbr(when, Short);
