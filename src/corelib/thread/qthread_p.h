@@ -202,13 +202,13 @@ public:
     QWaitCondition thread_done;
 
     static void *start(void *arg);
-    static void finish(void *);     // happens early (before thread-local dtors)
-    static void cleanup(void *);    // happens late (as a thread-local dtor, if possible)
+    void finish();          // happens early (before thread-local dtors)
+    void cleanup();         // happens late (as a thread-local dtor, if possible)
 #endif // Q_OS_UNIX
 
 #ifdef Q_OS_WIN
     static unsigned int __stdcall start(void *) noexcept;
-    static void finish(void *, bool lockAnyway = true) noexcept;
+    void finish(bool lockAnyway = true) noexcept;
 
     Qt::HANDLE handle;
     unsigned int id;

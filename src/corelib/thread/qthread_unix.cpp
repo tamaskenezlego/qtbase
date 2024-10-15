@@ -112,15 +112,15 @@ static void destroy_current_thread_data(void *p)
         // this is very likely the last reference. These pointers cannot be
         // null and there is no race.
         QThreadPrivate *thread_p = static_cast<QThreadPrivate *>(QObjectPrivate::get(thread));
-        thread_p->finish(thread);
+        thread_p->finish();
         if constexpr (!QT_CONFIG(broken_threadlocal_dtors))
-            thread_p->cleanup(thread);
+            thread_p->cleanup();
     } else if constexpr (!QT_CONFIG(broken_threadlocal_dtors)) {
         // We may be racing the QThread destructor in another thread. With
         // two-phase clean-up enabled, there's also no race because it will
         // stop in a call to QThread::wait() until we call cleanup().
         QThreadPrivate *thread_p = static_cast<QThreadPrivate *>(QObjectPrivate::get(thread));
-        thread_p->cleanup(thread);
+        thread_p->cleanup();
     } else {
         // We may be racing the QThread destructor in another thread and it may
         // have begun destruction; we must not dereference the QThread pointer.
@@ -314,7 +314,7 @@ void *QThreadPrivate::start(void *arg)
     // this ensures the thread-local is created as early as possible
     set_thread_data(data);
 
-    pthread_cleanup_push(QThreadPrivate::finish, arg);
+    pthread_cleanup_push([](void *arg) { static_cast<QThread *>(arg)->d_func()->finish(); }, arg);
     terminate_on_exception([&] {
         {
             QMutexLocker locker(&thr->d_func()->mutex);
@@ -361,11 +361,11 @@ void *QThreadPrivate::start(void *arg)
     return nullptr;
 }
 
-void QThreadPrivate::finish(void *arg)
+void QThreadPrivate::finish()
 {
     terminate_on_exception([&] {
-        QThread *thr = reinterpret_cast<QThread *>(arg);
-        QThreadPrivate *d = thr->d_func();
+        QThreadPrivate *d = this;
+        QThread *thr = q_func();
 
         // Disable cancellation; we're already in the finishing touches of this
         // thread, and we don't want cleanup to be disturbed by
@@ -388,14 +388,13 @@ void QThreadPrivate::finish(void *arg)
     });
 
     if constexpr (QT_CONFIG(broken_threadlocal_dtors))
-        cleanup(arg);
+        cleanup();
 }
 
-void QThreadPrivate::cleanup(void *arg)
+void QThreadPrivate::cleanup()
 {
     terminate_on_exception([&] {
-        QThread *thr = reinterpret_cast<QThread *>(arg);
-        QThreadPrivate *d = thr->d_func();
+        QThreadPrivate *d = this;
 
         // Disable cancellation again: we did it above, but some user code
         // running between finish() and cleanup() may have turned them back on.
