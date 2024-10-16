@@ -108,7 +108,7 @@ class CldrReader (object):
                 'They could be removed at the next major version.\n')
 
         # Check for duplicate entries in winIds:
-        last = ('', '', '')
+        last: tuple[str, str, str] = ('', '', '')
         winDup = {}
         for triple in sorted(winIds):
             if triple[:2] == last[:2]:
@@ -117,6 +117,7 @@ class CldrReader (object):
                 except KeyError:
                     seq = winDup[triple[:2]] = []
                 seq.append(triple[-1])
+            last = triple
         if winDup:
             joined = '\n\t'.join(f'{t}, {w}: ", ".join(ids)'
                                  for (w, t), ids in winDup.items())
