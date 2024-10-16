@@ -2229,22 +2229,39 @@ static void populateLightSystemBasePalette(QPalette &result)
     const QColor btnHighlight = result.accent().color();
     const QColor btnColor = result.button().color();
 
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Highlight, btnHighlight);
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::WindowText, textColor);
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Button, btnFace);
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Light, btnColor.lighter(150));
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Dark, btnColor.darker(200));
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Mid, btnColor.darker(150));
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Text, textColor);
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::BrightText, btnHighlight);
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Base, btnFace);
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Window, QColor(0xF3,0xF3,0xF3,0xFF));
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::ButtonText, textColor);
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Midlight, btnColor.lighter(125));
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::Shadow, Qt::black);
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::ToolTipBase, result.window().color());
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::ToolTipText, result.windowText().color());
-    SET_IF_UNRESOLVED(QPalette::All, QPalette::AlternateBase, alternateBase);
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Highlight, btnHighlight);
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::WindowText, textColor);
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Button, btnFace);
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Light, btnColor.lighter(150));
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Dark, btnColor.darker(200));
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Mid, btnColor.darker(150));
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Text, textColor);
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::BrightText, btnHighlight);
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Base, btnFace);
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Window, QColor(0xF3,0xF3,0xF3,0xFF));
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::ButtonText, textColor);
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Midlight, btnColor.lighter(125));
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::Shadow, Qt::black);
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::ToolTipBase, result.window().color());
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::ToolTipText, result.windowText().color());
+    SET_IF_UNRESOLVED(QPalette::Active, QPalette::AlternateBase, alternateBase);
+
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Highlight, btnHighlight);
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::WindowText, textColor);
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Button, btnFace);
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Light, btnColor.lighter(150));
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Dark, btnColor.darker(200));
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Mid, btnColor.darker(150));
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Text, textColor);
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::BrightText, btnHighlight);
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Base, btnFace);
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Window, QColor(0xF3,0xF3,0xF3,0xFF));
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::ButtonText, textColor);
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Midlight, btnColor.lighter(125));
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::Shadow, Qt::black);
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::ToolTipBase, result.window().color());
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::ToolTipText, result.windowText().color());
+    SET_IF_UNRESOLVED(QPalette::Inactive, QPalette::AlternateBase, alternateBase);
 
     result.setColor(QPalette::Disabled, QPalette::WindowText, textDisabled);
 
