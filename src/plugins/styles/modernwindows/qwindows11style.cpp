@@ -1354,10 +1354,24 @@ void QWindows11Style::drawControl(ControlElement element, const QStyleOption *op
 
             if (btn->features & QStyleOptionButton::HasMenu) {
                 int indicatorSize = proxy()->pixelMetric(PM_MenuButtonIndicator, btn, widget);
-                if (btn->direction == Qt::LeftToRight)
+                QLineF menuSplitter;
+                QRectF indicatorRect;
+                painter->setFont(assetFont);
+
+                if (btn->direction == Qt::LeftToRight) {
+                    indicatorRect = QRect(textRect.x() + textRect.width() - indicatorSize - 4, textRect.y(),2 * 4 + indicatorSize, textRect.height());
+                    indicatorRect.adjust(0.5,-0.5,0.5,0.5);
+                    menuSplitter = QLineF(indicatorRect.topLeft(),indicatorRect.bottomLeft());
                     textRect = textRect.adjusted(0, 0, -indicatorSize, 0);
-                else
+                } else {
+                    indicatorRect = QRect(textRect.x(), textRect.y(), textRect.x() + indicatorSize + 4, textRect.height());
+                    indicatorRect.adjust(-0.5,-0.5,-0.5,0.5);
+                    menuSplitter = QLineF(indicatorRect.topRight(),indicatorRect.bottomRight());
                     textRect = textRect.adjusted(indicatorSize, 0, 0, 0);
+                }
+                painter->drawText(indicatorRect,"\uE70D",Qt::AlignVCenter|Qt::AlignHCenter);
+                painter->setPen(QPen(WINUI3Colors[colorSchemeIndex][controlStrokePrimary]));
+                painter->drawLine(menuSplitter);
             }
             if (!btn->icon.isNull()) {
                 //Center both icon and text
