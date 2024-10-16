@@ -1124,6 +1124,13 @@ void QWindows11Style::drawControl(ControlElement element, const QStyleOption *op
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
     switch (element) {
+    case QStyle::CE_ComboBoxLabel:
+        if (const QStyleOptionComboBox *cb = qstyleoption_cast<const QStyleOptionComboBox *>(option)) {
+            QStyleOptionComboBox newOption = *cb;
+            newOption.rect.adjust(4,0,-4,0);
+            QCommonStyle::drawControl(element, &newOption, painter,widget);
+        }
+        break;
     case QStyle::CE_TabBarTabShape:
         if (const QStyleOptionTab *tab = qstyleoption_cast<const QStyleOptionTab *>(option)) {
             QRectF tabRect = tab->rect.marginsRemoved(QMargins(2,2,0,0));
@@ -1781,7 +1788,7 @@ QRect QWindows11Style::subElementRect(QStyle::SubElement element, const QStyleOp
     QRect ret;
     switch (element) {
     case QStyle::SE_LineEditContents:
-        ret = option->rect.adjusted(8,0,-8,0);
+        ret = option->rect.adjusted(4,0,-4,0);
         break;
     case QStyle::SE_ItemViewItemText:
         if (const auto *item = qstyleoption_cast<const QStyleOptionViewItem *>(option)) {
