@@ -509,6 +509,20 @@ static void obtainSdkVersion()
         qCritical() << "Unable to obtain the SDK version of the target.";
 }
 
+static QStringList runningDevices()
+{
+    QByteArray output;
+    execAdbCommand({ "devices"_L1 }, &output, false);
+
+    QStringList devices;
+    for (const QByteArray &line : output.split(u'\n')) {
+        if (line.contains("\tdevice"_L1))
+            devices.append(QString::fromUtf8(line.split(u'\t').first()));
+    }
+
+    return devices;
+}
+
 static bool pullFiles()
 {
     bool ret = true;
@@ -752,6 +766,16 @@ int main(int argc, char *argv[])
         qCritical("No apk \"%s\" found after running the make command. "
                   "Check the provided path and the make command.",
                   qPrintable(g_options.apkPath));
+        return 1;
+    }
+
+    const QStringList devices = runningDevices();
+    if (devices.isEmpty()) {
+        qCritical("No connected devices or running emulators can be found.");
+        return 1;
+    } else if (!g_options.serial.isEmpty() && !devices.contains(g_options.serial)) {
+        qCritical("No connected device or running emulator with serial '%s' can be found.",
+                  qPrintable(g_options.serial));
         return 1;
     }
 
