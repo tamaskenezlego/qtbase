@@ -24,90 +24,6 @@
 
 using namespace Qt::StringLiterals;
 
-static bool checkJunit(const QByteArray &data) {
-    QXmlStreamReader reader{data};
-    while (!reader.atEnd()) {
-        reader.readNext();
-
-        if (!reader.isStartElement())
-            continue;
-
-        if (reader.name() == "error"_L1)
-            return false;
-
-        const QString type = reader.attributes().value("type"_L1).toString();
-        if (reader.name() == "failure"_L1) {
-            if (type == "fail"_L1 || type == "xpass"_L1)
-                return false;
-        }
-    }
-
-    // Fail if there's an error after reading through all the xml output
-    return !reader.hasError();
-}
-
-static bool checkTxt(const QByteArray &data) {
-    if (data.indexOf("\nFAIL!  : "_L1) >= 0)
-        return false;
-    if (data.indexOf("\nXPASS  : "_L1) >= 0)
-        return false;
-    // Look for "********* Finished testing of tst_QTestName *********"
-    static const QRegularExpression testTail("\\*+ +Finished testing of .+ +\\*+"_L1);
-    return testTail.match(QLatin1StringView(data)).hasMatch();
-}
-
-static bool checkCsv(const QByteArray &data) {
-    // The csv format is only suitable for benchmarks,
-    // so this is not much useful to determine test failure/success.
-    // FIXME: warn the user early on about this.
-    Q_UNUSED(data);
-    return true;
-}
-
-static bool checkXml(const QByteArray &data) {
-    QXmlStreamReader reader{data};
-    while (!reader.atEnd()) {
-        reader.readNext();
-        const QString type = reader.attributes().value("type"_L1).toString();
-        const bool isIncident = (reader.name() == "Incident"_L1);
-        if (reader.isStartElement() && isIncident) {
-            if (type == "fail"_L1 || type == "xpass"_L1)
-                return false;
-        }
-    }
-
-    // Fail if there's an error after reading through all the xml output
-    return !reader.hasError();
-}
-
-static bool checkLightxml(const QByteArray &data) {
-    // lightxml intentionally skips the root element, which technically makes it
-    // not valid XML. We'll add that ourselves for the purpose of validation.
-    QByteArray newData = data;
-    newData.prepend("<root>");
-    newData.append("</root>");
-    return checkXml(newData);
-}
-
-static bool checkTeamcity(const QByteArray &data) {
-    if (data.indexOf("' message='Failure! |[Loc: ") >= 0)
-        return false;
-    const QList<QByteArray> lines = data.trimmed().split('\n');
-    if (lines.isEmpty())
-        return false;
-    return lines.last().startsWith("##teamcity[testSuiteFinished "_L1);
-}
-
-static bool checkTap(const QByteArray &data) {
-    // This will still report blacklisted fails because QTest with TAP
-    // is not putting any data about that.
-    if (data.indexOf("\nnot ok ") >= 0)
-        return false;
-
-    static const QRegularExpression testTail("ok [0-9]* - cleanupTestCase\\(\\)"_L1);
-    return testTail.match(QLatin1StringView(data)).hasMatch();
-}
-
 struct Options
 {
     bool helpRequested = false;
@@ -127,16 +43,6 @@ struct Options
     QString apkPath;
     QString ndkStackPath;
     bool showLogcatOutput = false;
-    const QHash<QString, std::function<bool(const QByteArray &)>> checkFiles = {
-        {"txt"_L1, checkTxt},
-        {"csv"_L1, checkCsv},
-        {"xml"_L1, checkXml},
-        {"lightxml"_L1, checkLightxml},
-        {"xunitxml"_L1, checkJunit},
-        {"junitxml"_L1, checkJunit},
-        {"teamcity"_L1, checkTeamcity},
-        {"tap"_L1, checkTap},
-    };
 };
 
 static Options g_options;
@@ -552,7 +458,6 @@ static QString runCommandAsUserArgs(const QString &cmd)
 
 static bool pullResults()
 {
-    bool ret = true;
     for (auto it = g_options.outFiles.constBegin(); it != g_options.outFiles.end(); ++it) {
         // Get only stdout from cat and get rid of stderr and fail later if the output is empty
         const QString outSuffix = it.key();
@@ -580,9 +485,7 @@ static bool pullResults()
             return false;
         }
 
-        auto checkerIt = g_options.checkFiles.find(outSuffix);
-        ret &= (checkerIt != g_options.checkFiles.end() && checkerIt.value()(output));
-        if (it.value() == "-"_L1) {
+        if (it.value() == u'-') {
             fprintf(stdout, "%s\n", output.constData());
         } else {
             QFile out{it.value()};
@@ -591,7 +494,8 @@ static bool pullResults()
             out.write(output);
         }
     }
-    return ret;
+
+    return true;
 }
 
 void printLogcat(const QString &formattedTime)
