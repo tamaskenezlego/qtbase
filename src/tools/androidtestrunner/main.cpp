@@ -550,7 +550,7 @@ static QString runCommandAsUserArgs(const QString &cmd)
     return "run-as %1 --user %2 %3"_L1.arg(g_options.package, g_testInfo.userId, cmd);
 }
 
-static bool pullFiles()
+static bool pullResults()
 {
     bool ret = true;
     for (auto it = g_options.outFiles.constBegin(); it != g_options.outFiles.end(); ++it) {
@@ -719,6 +719,19 @@ static QString getCurrentTimeString()
     return QString::fromUtf8(output.simplified());
 }
 
+static int testExitCode()
+{
+    QByteArray exitCodeOutput;
+    const QString exitCodeCmd = "cat files/qtest_last_exit_code 2> /dev/null"_L1;
+    if (!execAdbCommand({ "shell"_L1, runCommandAsUserArgs(exitCodeCmd) }, &exitCodeOutput))
+        return 1;
+
+    bool ok;
+    int exitCode = exitCodeOutput.toInt(&ok);
+
+    return ok ? exitCode : 1;
+}
+
 static bool uninstallTestPackage()
 {
     return execAdbCommand({ "uninstall"_L1, g_options.package }, nullptr);
@@ -831,24 +844,24 @@ int main(int argc, char *argv[])
     const QString formattedTime = getCurrentTimeString();
 
     // start the tests
-    bool success = execAdbCommand(g_options.amStarttestArgs, nullptr);
+    if (!execAdbCommand(g_options.amStarttestArgs, nullptr))
+        return 1;
 
     waitForStartedAndFinished();
 
-    if (success) {
-        success &= pullFiles();
-        if (g_options.showLogcatOutput)
-            printLogcat(formattedTime);
-    }
+    int exitCode = testExitCode();
 
     // If we have a failure, attempt to print both logcat and the crash buffer which
     // includes the crash stacktrace that is not included in the default logcat.
-    if (!success) {
+    if (exitCode != 0 || g_options.showLogcatOutput)
         printLogcat(formattedTime);
+    if (exitCode != 0)
         printLogcatCrashBuffer(formattedTime);
-    }
 
-    success &= uninstallTestPackage();
+    exitCode = pullResults() ? exitCode : 1;
+
+    if (!uninstallTestPackage())
+        return 1;
 
     testRunnerLock.release();
 
@@ -857,5 +870,5 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    return success ? 0 : 1;
+    return exitCode;
 }
