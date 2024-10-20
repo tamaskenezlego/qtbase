@@ -266,7 +266,9 @@ static bool parseOptions()
     if (g_options.helpRequested || g_options.buildPath.isEmpty() || g_options.apkPath.isEmpty())
         return false;
 
-    g_options.serial = qEnvironmentVariable("ANDROID_DEVICE_SERIAL");
+    g_options.serial = qEnvironmentVariable("ANDROID_SERIAL");
+    if (g_options.serial.isEmpty())
+        g_options.serial = qEnvironmentVariable("ANDROID_DEVICE_SERIAL");
 
     if (g_options.ndkStackPath.isEmpty()) {
         const QString ndkPath = qEnvironmentVariable("ANDROID_NDK_ROOT");
@@ -282,8 +284,8 @@ static void printHelp()
 {
     qWarning(       "Syntax: %s <options> -- [TESTARGS] \n"
                     "\n"
-                    "  Runs an Android test on the default emulator/device or on the one\n"
-                    "  specified by \"ANDROID_DEVICE_SERIAL\" environment variable.\n"
+                    "  Runs a Qt for Android test on an emulator or a device. Specify a device\n"
+                    "  using the environment variables ANDROID_SERIAL or ANDROID_DEVICE_SERIAL.\n"
                     "\n"
                     "  Mandatory arguments:\n"
                     "    --path <path>: The path where androiddeployqt builds the android package.\n"
