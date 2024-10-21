@@ -12,6 +12,7 @@
 #include <QtCore/QSystemSemaphore>
 #include <QtCore/QThread>
 #include <QtCore/QXmlStreamReader>
+#include <QtCore/QFileInfo>
 
 #include <atomic>
 #include <csignal>
@@ -41,7 +42,7 @@ struct Options
     QString package;
     QString activity;
     QStringList testArgsList;
-    QString stdoutFormat;
+    QString stdoutFileName;
     QHash<QString, QString> outFiles;
     QStringList amStarttestArgs;
     QString apkPath;
@@ -266,15 +267,20 @@ static QString activityFromAndroidManifest(const QString &androidManifestPath)
 
 static void setOutputFile(QString file, QString format)
 {
-    if (file.isEmpty())
-        file = u'-';
     if (format.isEmpty())
         format = "txt"_L1;
 
-    if (file == u'-')
-        g_options.stdoutFormat = format;
-
-    g_options.outFiles[format] = file;
+    if ((file.isEmpty() || file == u'-')) {
+        if (g_options.outFiles.contains(format)) {
+            file = g_options.outFiles.value(format);
+        } else {
+            file = "stdout.%1"_L1.arg(format);
+            g_options.outFiles[format] = file;
+        }
+        g_options.stdoutFileName = QFileInfo(file).fileName();
+    } else {
+        g_options.outFiles[format] = file;
+    }
 }
 
 static bool parseTestArgs()
@@ -321,8 +327,8 @@ static bool parseTestArgs()
         setOutputFile(file, logType);
 
     QString testAppArgs;
-    for (const auto &format : g_options.outFiles.keys())
-        testAppArgs += "-o output.%1,%1 "_L1.arg(format);
+    for (auto it = g_options.outFiles.constBegin(); it != g_options.outFiles.constEnd(); ++it)
+        testAppArgs += "-o %1,%2 "_L1.arg(QFileInfo(it.value()).fileName(), it.key());
 
     testAppArgs += unhandledArgs.join(u' ').trimmed();
     testAppArgs = "\"%1\""_L1.arg(testAppArgs.trimmed());
@@ -410,7 +416,7 @@ static void waitForStarted()
 
 static void waitForLoggingStarted()
 {
-    const QString lsCmd = "ls files/output.%1"_L1.arg(g_options.stdoutFormat);
+    const QString lsCmd = "ls files/%1"_L1.arg(g_options.stdoutFileName);
     const QStringList adbLsCmd = { "shell"_L1, runCommandAsUserArgs(lsCmd) };
 
     QDeadlineTimer deadline(5000);
@@ -424,7 +430,7 @@ static void waitForLoggingStarted()
 static bool setupStdoutLogger()
 {
     // Start tail to get results to stdout as soon as they're available
-    const QString tailPipeCmd = "tail -n +1 -f files/output.%1"_L1.arg(g_options.stdoutFormat);
+    const QString tailPipeCmd = "tail -n +1 -f files/%1"_L1.arg(g_options.stdoutFileName);
     const QStringList adbTailCmd = { "shell"_L1, runCommandAsUserArgs(tailPipeCmd) };
 
     g_options.stdoutLogger.emplace();
@@ -530,10 +536,11 @@ static QStringList runningDevices()
 
 static bool pullResults()
 {
-    for (auto it = g_options.outFiles.constBegin(); it != g_options.outFiles.end(); ++it) {
+    for (auto it = g_options.outFiles.constBegin(); it != g_options.outFiles.constEnd(); ++it) {
+        const QString filePath = it.value();
+        const QString fileName = QFileInfo(filePath).fileName();
         // Get only stdout from cat and get rid of stderr and fail later if the output is empty
-        const QString outSuffix = it.key();
-        const QString catCmd = "cat files/output.%1 2> /dev/null"_L1.arg(outSuffix);
+        const QString catCmd = "cat files/%1 2> /dev/null"_L1.arg(fileName);
         const QStringList fullCatArgs = { "shell"_L1, runCommandAsUserArgs(catCmd) };
 
         bool catSuccess = false;
@@ -548,21 +555,21 @@ static bool pullResults()
         }
 
         if (!catSuccess) {
-            qCritical() << "Error: failed to retrieve the test's output.%1 file."_L1.arg(outSuffix);
+            qCritical() << "Error: failed to retrieve the test result file %1."_L1.arg(fileName);
             return false;
         }
 
         if (output.isEmpty()) {
-            qCritical() << "Error: the test's output.%1 is empty."_L1.arg(outSuffix);
+            qCritical() << "Error: the test result file %1 is empty."_L1.arg(fileName);
             return false;
         }
 
-        if (it.value() != u'-') {
-            QFile out{it.value()};
-            if (!out.open(QIODevice::WriteOnly))
-                return false;
-            out.write(output);
+        QFile out{filePath};
+        if (!out.open(QIODevice::WriteOnly)) {
+            qCritical() << "Error: failed to open %1 to write results to host."_L1.arg(filePath);
+            return false;
         }
+        out.write(output);
     }
 
     return true;
