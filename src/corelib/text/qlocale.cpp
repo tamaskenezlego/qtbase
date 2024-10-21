@@ -4,7 +4,15 @@
 
 #include "qglobal.h"
 
-#if (defined(QT_STATIC) || defined(QT_BOOTSTRAPPED)) && defined(Q_CC_GNU_ONLY) && Q_CC_GNU >= 1000
+#if defined(Q_CC_GNU_ONLY) && Q_CC_GNU >= 1000
+/* gcc has complained about storing a pointer to a static QLocalePrivate in a
+   QSharedDataPointer, whose destructor would free the non-heap object if the
+   refcount ever got down to zero. The static instances this happens to are
+   instantiated with a refcount of 1 that never gets decremented so as long as
+   QSharedDataPointer keeps its incref()s and decref()s balanced it'll never get
+   down to zero - but the clever compiler isn't quite smart enough to figure
+   that out.
+*/
 QT_WARNING_DISABLE_GCC("-Wfree-nonheap-object") // false positive tracking
 #endif
 
