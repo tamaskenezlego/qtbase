@@ -16,6 +16,7 @@
 #include <atomic>
 #include <csignal>
 #include <functional>
+#include <optional>
 #if defined(Q_OS_WIN32)
 #include <process.h>
 #else
@@ -38,11 +39,13 @@ struct Options
     QString package;
     QString activity;
     QStringList testArgsList;
+    QString stdoutFormat;
     QHash<QString, QString> outFiles;
     QStringList amStarttestArgs;
     QString apkPath;
     QString ndkStackPath;
     bool showLogcatOutput = false;
+    std::optional<QProcess> stdoutLogger;
 };
 
 static Options g_options;
@@ -260,9 +263,12 @@ static QString activityFromAndroidManifest(const QString &androidManifestPath)
 static void setOutputFile(QString file, QString format)
 {
     if (file.isEmpty())
-        file = "-"_L1;
+        file = u'-';
     if (format.isEmpty())
         format = "txt"_L1;
+
+    if (file == u'-')
+        g_options.stdoutFormat = format;
 
     g_options.outFiles[format] = file;
 }
@@ -364,6 +370,11 @@ static bool obtainPid() {
     return true;
 }
 
+static QString runCommandAsUserArgs(const QString &cmd)
+{
+    return "run-as %1 --user %2 %3"_L1.arg(g_options.package, g_testInfo.userId, cmd);
+}
+
 static bool isRunning() {
     if (g_testInfo.pid < 1)
         return false;
@@ -382,7 +393,7 @@ static bool isRunning() {
     return psSuccess && output.trimmed() == g_options.package.toUtf8();
 }
 
-static void waitForStartedAndFinished()
+static void waitForStarted()
 {
     // wait to start and set PID
     QDeadlineTimer startDeadline(10000);
@@ -391,7 +402,69 @@ static void waitForStartedAndFinished()
             break;
         QThread::msleep(100);
     } while (!startDeadline.hasExpired() && !g_testInfo.isTestRunnerInterrupted.load());
+}
 
+static void waitForLoggingStarted()
+{
+    const QString lsCmd = "ls files/output.%1"_L1.arg(g_options.stdoutFormat);
+    const QStringList adbLsCmd = { "shell"_L1, runCommandAsUserArgs(lsCmd) };
+
+    QDeadlineTimer deadline(5000);
+    do {
+        if (execAdbCommand(adbLsCmd))
+            break;
+        QThread::msleep(100);
+    } while (!deadline.hasExpired() && !g_testInfo.isTestRunnerInterrupted.load());
+}
+
+static bool setupStdoutLogger()
+{
+    // Start tail to get results to stdout as soon as they're available
+    const QString tailPipeCmd = "tail -n +1 -f files/output.%1"_L1.arg(g_options.stdoutFormat);
+    const QStringList adbTailCmd = { "shell"_L1, runCommandAsUserArgs(tailPipeCmd) };
+
+    g_options.stdoutLogger.emplace();
+    g_options.stdoutLogger->setProcessChannelMode(QProcess::ForwardedOutputChannel);
+    g_options.stdoutLogger->start(g_options.adbCommand, adbTailCmd);
+
+    if (!g_options.stdoutLogger->waitForStarted()) {
+        qCritical() << "Error: failed to run adb command to fetch stdout test results.";
+        g_options.stdoutLogger = std::nullopt;
+        return false;
+    }
+
+    return true;
+}
+
+static bool stopStdoutLogger()
+{
+    if (!g_options.stdoutLogger.has_value()) {
+        // In case this ever happens, it setupStdoutLogger() wasn't called, whether
+        // that's on purpose or not, return true since what it does is achieved.
+        qCritical() << "Trying to stop the stdout logger process while it's been uninitialised";
+        return true;
+    }
+
+    if (g_options.stdoutLogger->state() == QProcess::NotRunning) {
+        // We expect the tail command to be running until we stop it, so if it's
+        // not running it might have been terminated outside of the test runner.
+        qCritical() << "The stdout logger process was terminated unexpectedly, "
+                       "It might have been terminated by an external process";
+        return false;
+    }
+
+    g_options.stdoutLogger->terminate();
+
+    if (!g_options.stdoutLogger->waitForFinished()) {
+        qCritical() << "Error: adb test results tail command timed out.";
+        return false;
+    }
+
+    return true;
+}
+
+static void waitForFinished()
+{
     // Wait to finish
     QDeadlineTimer finishedDeadline(g_options.timeoutSecs * 1000);
     do {
@@ -451,11 +524,6 @@ static QStringList runningDevices()
     return devices;
 }
 
-static QString runCommandAsUserArgs(const QString &cmd)
-{
-    return "run-as %1 --user %2 %3"_L1.arg(g_options.package, g_testInfo.userId, cmd);
-}
-
 static bool pullResults()
 {
     for (auto it = g_options.outFiles.constBegin(); it != g_options.outFiles.end(); ++it) {
@@ -485,9 +553,7 @@ static bool pullResults()
             return false;
         }
 
-        if (it.value() == u'-') {
-            fprintf(stdout, "%s\n", output.constData());
-        } else {
+        if (it.value() != u'-') {
             QFile out{it.value()};
             if (!out.open(QIODevice::WriteOnly))
                 return false;
@@ -745,13 +811,21 @@ int main(int argc, char *argv[])
     if (!g_testInfo.isPackageInstalled)
         return 1;
 
-    const QString formattedTime = getCurrentTimeString();
-
     // start the tests
+    const QString formattedTime = getCurrentTimeString();
     if (!execAdbCommand(g_options.amStarttestArgs, nullptr))
         return 1;
 
-    waitForStartedAndFinished();
+    waitForStarted();
+    waitForLoggingStarted();
+
+    if (!setupStdoutLogger())
+        return 1;
+
+    waitForFinished();
+
+    if (!stopStdoutLogger())
+        return 1;
 
     int exitCode = testExitCode();
 
