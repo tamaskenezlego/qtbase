@@ -145,6 +145,7 @@ struct TestInfo
 {
     int sdkVersion = -1;
     int pid = -1;
+    QString userId;
 
     std::atomic<bool> isPackageInstalled { false };
     std::atomic<bool> isTestRunnerInterrupted { false };
@@ -512,6 +513,24 @@ static void obtainSdkVersion()
         qCritical() << "Unable to obtain the SDK version of the target.";
 }
 
+static QString userId()
+{
+    // adb get-current-user command is available starting from API level 26.
+    QByteArray userId;
+    if (g_testInfo.sdkVersion >= 26) {
+        const QStringList userIdArgs = {"shell"_L1, "cmd"_L1, "activity"_L1, "get-current-user"_L1};
+        if (!execAdbCommand(userIdArgs, &userId, false)) {
+            qCritical() << "Error: failed to retrieve the user ID";
+            userId.clear();
+        }
+    }
+
+    if (userId.isEmpty())
+        userId = "0";
+
+    return QString::fromUtf8(userId.simplified());
+}
+
 static QStringList runningDevices()
 {
     QByteArray output;
@@ -526,27 +545,19 @@ static QStringList runningDevices()
     return devices;
 }
 
+static QString runCommandAsUserArgs(const QString &cmd)
+{
+    return "run-as %1 --user %2 %3"_L1.arg(g_options.package, g_testInfo.userId, cmd);
+}
+
 static bool pullFiles()
 {
     bool ret = true;
-    QByteArray userId;
-    // adb get-current-user command is available starting from API level 26.
-    if (g_testInfo.sdkVersion >= 26) {
-        const QStringList userIdArgs = {"shell"_L1, "cmd"_L1, "activity"_L1, "get-current-user"_L1};
-        if (!execAdbCommand(userIdArgs, &userId, false)) {
-            qCritical() << "Error: failed to retrieve the user ID";
-            return false;
-        }
-    } else {
-        userId = "0";
-    }
-
     for (auto it = g_options.outFiles.constBegin(); it != g_options.outFiles.end(); ++it) {
         // Get only stdout from cat and get rid of stderr and fail later if the output is empty
         const QString outSuffix = it.key();
         const QString catCmd = "cat files/output.%1 2> /dev/null"_L1.arg(outSuffix);
-        const QStringList fullCatArgs = { "shell"_L1, "run-as %1 --user %2 %3"_L1.arg(
-                g_options.package, QString::fromUtf8(userId.simplified()), catCmd) };
+        const QStringList fullCatArgs = { "shell"_L1, runCommandAsUserArgs(catCmd) };
 
         bool catSuccess = false;
         QByteArray output;
@@ -797,6 +808,8 @@ int main(int argc, char *argv[])
     }
 
     obtainSdkVersion();
+
+    g_testInfo.userId = userId();
 
     QString manifest = g_options.buildPath + "/AndroidManifest.xml"_L1;
     g_options.package = packageNameFromAndroidManifest(manifest);
