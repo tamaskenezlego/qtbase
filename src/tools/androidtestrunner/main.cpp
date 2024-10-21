@@ -585,7 +585,11 @@ static bool pullFiles()
 
 void printLogcat(const QString &formattedTime)
 {
-    QStringList logcatArgs = { "logcat"_L1 };
+    QStringList logcatArgs = { "logcat"_L1, "-v"_L1, "brief"_L1 };
+
+    if (qEnvironmentVariable("QTEST_ENVIRONMENT") != "ci"_L1)
+        logcatArgs << "-v"_L1 << "color"_L1;
+
     if (g_testInfo.sdkVersion <= 23 || g_testInfo.pid == -1)
         logcatArgs << "-t"_L1 << formattedTime;
     else
