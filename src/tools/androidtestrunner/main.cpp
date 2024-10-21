@@ -638,7 +638,7 @@ void printLogcatCrashBuffer(const QString &formattedTime)
         ndkStackProcess.start(g_options.ndkStackPath, { "-sym"_L1, libsPath });
     }
 
-    QStringList adbCrashArgs = { "logcat"_L1, "-b"_L1, "crash"_L1, "-t"_L1, formattedTime };
+    QStringList adbCrashArgs = {"logcat"_L1, "-d"_L1, "-b"_L1, "crash"_L1, "-t"_L1, formattedTime};
     if (!g_options.serial.isEmpty())
         adbCrashArgs = QStringList{"-s"_L1 + g_options.serial} + adbCrashArgs;
 
@@ -649,19 +649,21 @@ void printLogcatCrashBuffer(const QString &formattedTime)
         return;
     }
 
-    if (useNdkStack && !ndkStackProcess.waitForStarted()) {
-        qCritical() << "Error: failed to run ndk-stack command.";
-        return;
-    }
-
     if (!adbCrashProcess.waitForFinished()) {
         qCritical() << "Error: adb command timed out.";
         return;
     }
 
-    if (useNdkStack && !ndkStackProcess.waitForFinished()) {
-        qCritical() << "Error: ndk-stack command timed out.";
-        return;
+    if (useNdkStack) {
+        if (!ndkStackProcess.waitForStarted()) {
+            qCritical() << "Error: failed to run ndk-stack command.";
+            return;
+        }
+
+        if (!ndkStackProcess.waitForFinished()) {
+            qCritical() << "Error: ndk-stack command timed out.";
+            return;
+        }
     }
 
     const QByteArray crash = useNdkStack ? ndkStackProcess.readAllStandardOutput()
