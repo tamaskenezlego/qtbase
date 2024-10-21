@@ -114,6 +114,7 @@ struct Options
     bool verbose = false;
     bool skipAddInstallRoot = false;
     int timeoutSecs = 600; // 10 minutes
+    int resultsPullRetries = 3;
     QString buildPath;
     QString adbCommand{"adb"_L1};
     QString serial;
@@ -547,8 +548,18 @@ static bool pullFiles()
         const QStringList fullCatArgs = { "shell"_L1, "run-as %1 --user %2 %3"_L1.arg(
                 g_options.package, QString::fromUtf8(userId.simplified()), catCmd) };
 
+        bool catSuccess = false;
         QByteArray output;
-        if (!execAdbCommand(fullCatArgs, &output, false)) {
+
+        for (int i = 1; i <= g_options.resultsPullRetries; ++i) {
+            catSuccess = execAdbCommand(fullCatArgs, &output, false);
+            if (!catSuccess)
+                continue;
+            else if (!output.isEmpty())
+                break;
+        }
+
+        if (!catSuccess) {
             qCritical() << "Error: failed to retrieve the test's output.%1 file."_L1.arg(outSuffix);
             return false;
         }
