@@ -685,10 +685,8 @@ void printLogcatCrashBuffer(const QString &formattedTime)
 
     const QByteArray crash = useNdkStack ? ndkStackProcess.readAllStandardOutput()
                                          : adbCrashProcess.readAllStandardOutput();
-    if (crash.isEmpty()) {
-        qWarning() << "The retrieved crash logcat is empty";
+    if (crash.isEmpty())
         return;
-    }
 
     qDebug() << "****** Begin logcat crash buffer output ******";
     qDebug().noquote() << crash;
