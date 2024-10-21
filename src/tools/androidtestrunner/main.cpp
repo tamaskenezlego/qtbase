@@ -25,6 +25,8 @@
 
 using namespace Qt::StringLiterals;
 
+#define EXIT_ERROR -1
+
 struct Options
 {
     bool helpRequested = false;
@@ -197,6 +199,8 @@ static void printHelp()
                     "\n"
                     "  Runs a Qt for Android test on an emulator or a device. Specify a device\n"
                     "  using the environment variables ANDROID_SERIAL or ANDROID_DEVICE_SERIAL.\n"
+                    "  Returns the number of failed tests, -1 on test runner deployment related\n"
+                    "  failures or zero on success."
                     "\n"
                     "  Mandatory arguments:\n"
                     "    --path <path>: The path where androiddeployqt builds the android package.\n"
@@ -694,12 +698,12 @@ static int testExitCode()
     QByteArray exitCodeOutput;
     const QString exitCodeCmd = "cat files/qtest_last_exit_code 2> /dev/null"_L1;
     if (!execAdbCommand({ "shell"_L1, runCommandAsUserArgs(exitCodeCmd) }, &exitCodeOutput))
-        return 1;
+        return EXIT_ERROR;
 
     bool ok;
     int exitCode = exitCodeOutput.toInt(&ok);
 
-    return ok ? exitCode : 1;
+    return ok ? exitCode : EXIT_ERROR;
 }
 
 static bool uninstallTestPackage()
@@ -752,24 +756,24 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
     if (!parseOptions()) {
         printHelp();
-        return 1;
+        return EXIT_ERROR;
     }
 
     if (g_options.makeCommand.isEmpty()) {
         qCritical() << "It is required to provide a make command with the \"--make\" parameter "
                        "to generate the apk.";
-        return 1;
+        return EXIT_ERROR;
     }
     if (!execCommand(g_options.makeCommand, nullptr, true)) {
         if (!g_options.skipAddInstallRoot) {
             // we need to run make INSTALL_ROOT=path install to install the application file(s) first
             if (!execCommand("%1 INSTALL_ROOT=%2 install"_L1.arg(g_options.makeCommand,
                                         QDir::toNativeSeparators(g_options.buildPath)), nullptr)) {
-                return 1;
+                return EXIT_ERROR;
             }
         } else {
             if (!execCommand(g_options.makeCommand, nullptr))
-                return 1;
+                return EXIT_ERROR;
         }
     }
 
@@ -777,17 +781,17 @@ int main(int argc, char *argv[])
         qCritical("No apk \"%s\" found after running the make command. "
                   "Check the provided path and the make command.",
                   qPrintable(g_options.apkPath));
-        return 1;
+        return EXIT_ERROR;
     }
 
     const QStringList devices = runningDevices();
     if (devices.isEmpty()) {
         qCritical("No connected devices or running emulators can be found.");
-        return 1;
+        return EXIT_ERROR;
     } else if (!g_options.serial.isEmpty() && !devices.contains(g_options.serial)) {
         qCritical("No connected device or running emulator with serial '%s' can be found.",
                   qPrintable(g_options.serial));
-        return 1;
+        return EXIT_ERROR;
     }
 
     obtainSdkVersion();
@@ -801,7 +805,7 @@ int main(int argc, char *argv[])
 
     // parseTestArgs depends on g_options.package
     if (!parseTestArgs())
-        return 1;
+        return EXIT_ERROR;
 
     // do not install or run packages while another test is running
     testRunnerLock.acquire();
@@ -809,23 +813,23 @@ int main(int argc, char *argv[])
     const QStringList installArgs = { "install"_L1, "-r"_L1, "-g"_L1, g_options.apkPath };
     g_testInfo.isPackageInstalled.store(execAdbCommand(installArgs, nullptr));
     if (!g_testInfo.isPackageInstalled)
-        return 1;
+        return EXIT_ERROR;
 
     // start the tests
     const QString formattedTime = getCurrentTimeString();
     if (!execAdbCommand(g_options.amStarttestArgs, nullptr))
-        return 1;
+        return EXIT_ERROR;
 
     waitForStarted();
     waitForLoggingStarted();
 
     if (!setupStdoutLogger())
-        return 1;
+        return EXIT_ERROR;
 
     waitForFinished();
 
     if (!stopStdoutLogger())
-        return 1;
+        return EXIT_ERROR;
 
     int exitCode = testExitCode();
 
@@ -836,16 +840,16 @@ int main(int argc, char *argv[])
     if (exitCode != 0)
         printLogcatCrashBuffer(formattedTime);
 
-    exitCode = pullResults() ? exitCode : 1;
+    exitCode = pullResults() ? exitCode : EXIT_ERROR;
 
     if (!uninstallTestPackage())
-        return 1;
+        return EXIT_ERROR;
 
     testRunnerLock.release();
 
     if (g_testInfo.isTestRunnerInterrupted.load()) {
         qCritical() << "The androidtestrunner was interrupted and the was test cleaned up.";
-        return 1;
+        return EXIT_ERROR;
     }
 
     return exitCode;
