@@ -797,10 +797,10 @@ function(qt_internal_add_test name)
                     if(NOT blacklist_files)
                         set_target_properties(${name} PROPERTIES _qt_blacklist_files "")
                         set(blacklist_files "")
-                        cmake_language(EVAL CODE "cmake_language(DEFER DIRECTORY \"${CMAKE_SOURCE_DIR}\" CALL \"_qt_internal_finalize_batch\" \"${name}\") ")
                     endif()
                     list(PREPEND blacklist_files "${CMAKE_CURRENT_SOURCE_DIR}/${blacklist_path}")
-                    set_target_properties(${name} PROPERTIES _qt_blacklist_files "${blacklist_files}")
+                    set_target_properties(${name} PROPERTIES
+                        _qt_blacklist_files "${blacklist_files}")
                 endif()
             else()
                 set(blacklist_path "BLACKLIST")
@@ -861,6 +861,35 @@ function(qt_internal_add_test name)
     endif()
 
     qt_internal_add_test_finalizers("${name}")
+endfunction()
+
+# Generates a blacklist file for the global batched test target.
+function(qt_internal_finalize_test_batch_blacklist)
+    _qt_internal_test_batch_target_name(batch_target_name)
+    if(NOT TARGET "${batch_target_name}")
+        return()
+    endif()
+
+    set(generated_blacklist_file "${CMAKE_CURRENT_BINARY_DIR}/BLACKLIST")
+
+    set(final_contents "")
+
+    get_target_property(blacklist_files "${batch_target_name}" _qt_blacklist_files)
+    if(blacklist_files)
+        foreach(blacklist_file ${blacklist_files})
+            file(READ "${blacklist_file}" file_contents)
+            if(file_contents)
+                string(APPEND final_contents "${file_contents}\n")
+            endif()
+        endforeach()
+    endif()
+
+    qt_configure_file(OUTPUT "${generated_blacklist_file}" CONTENT "${final_contents}")
+
+    qt_internal_add_resource(${batch_target_name} "batch_blacklist"
+        PREFIX "/"
+        FILES "${generated_blacklist_file}"
+        BASE ${CMAKE_CURRENT_BINARY_DIR})
 endfunction()
 
 # Given an optional test timeout value (specified via qt_internal_add_test's TIMEOUT option)

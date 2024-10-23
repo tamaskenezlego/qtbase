@@ -8,7 +8,9 @@
 #
 ######################################
 
-set(__qt_core_macros_module_base_dir "${CMAKE_CURRENT_LIST_DIR}")
+# Save the 'macros base dir' in a global property instead of a variable, to allow access in a
+# deferred function where the variable might not be accessible by the function scope.
+set_property(GLOBAL PROPERTY __qt_core_macros_module_base_dir "${CMAKE_CURRENT_LIST_DIR}")
 
 # macro used to create the names of output files preserving relative dirs
 macro(_qt_internal_make_output_file infile prefix ext outfile )
@@ -778,26 +780,6 @@ function(_qt_internal_finalize_executable target)
         __qt_internal_apply_plugin_imports_finalizer_mode("${target}")
         __qt_internal_process_dependency_object_libraries("${target}")
     endif()
-endfunction()
-
-function(_cat IN_FILE OUT_FILE)
-  file(READ ${IN_FILE} CONTENTS)
-  file(APPEND ${OUT_FILE} "${CONTENTS}\n")
-endfunction()
-
-function(_qt_internal_finalize_batch name)
-    find_package(Qt6 ${PROJECT_VERSION} CONFIG REQUIRED COMPONENTS Core)
-
-    set(generated_blacklist_file "${CMAKE_CURRENT_BINARY_DIR}/BLACKLIST")
-    get_target_property(blacklist_files "${name}" _qt_blacklist_files)
-    file(WRITE "${generated_blacklist_file}" "")
-    foreach(blacklist_file ${blacklist_files})
-        _cat("${blacklist_file}" "${generated_blacklist_file}")
-    endforeach()
-    qt_internal_add_resource(${name} "batch_blacklist"
-        PREFIX "/"
-        FILES "${CMAKE_CURRENT_BINARY_DIR}/BLACKLIST"
-        BASE ${CMAKE_CURRENT_BINARY_DIR})
 endfunction()
 
 # If a task needs to run before any targets are finalized in the current directory
@@ -2110,6 +2092,7 @@ function(__qt_internal_sanitize_resource_name out_var name)
 endfunction()
 
 function(__qt_internal_generate_init_resource_source_file out_var target resource_name)
+    get_property(__qt_core_macros_module_base_dir GLOBAL PROPERTY __qt_core_macros_module_base_dir)
     set(template_file "${__qt_core_macros_module_base_dir}/Qt6CoreResourceInit.in.cpp")
 
     # Gets replaced in the template
@@ -2378,6 +2361,7 @@ function(_qt_internal_process_resource target resourceName)
     # </qresource></RCC>
     string(APPEND qrcContents "  </qresource>\n</RCC>\n")
 
+    get_property(__qt_core_macros_module_base_dir GLOBAL PROPERTY __qt_core_macros_module_base_dir)
     set(template_file "${__qt_core_macros_module_base_dir}/Qt6CoreConfigureFileTemplate.in")
     set(qt_core_configure_file_contents "${qrcContents}")
     configure_file("${template_file}" "${generatedResourceFile}")

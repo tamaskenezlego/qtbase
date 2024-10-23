@@ -762,6 +762,12 @@ macro(qt_build_tests)
         endif()
     endif()
 
+    if(NOT QT_SUPERBUILD)
+        # In a super build, we don't want to finalize the batch blacklist at the end of each repo,
+        # but rather once at the end of the top-level configuration.
+        qt_internal_finalize_test_batch_blacklist()
+    endif()
+
     set(CMAKE_UNITY_BUILD ${QT_UNITY_BUILD})
 endmacro()
 
