@@ -455,12 +455,21 @@ static bool obtainPid() {
 }
 
 static bool isRunning() {
-    QByteArray output;
-    const QStringList psArgs = { "shell"_L1, "ps | grep ' %1'"_L1.arg(g_options.package) };
-    if (!execAdbCommand(psArgs, &output, false))
+    if (g_testInfo.pid < 1)
         return false;
 
-    return output.indexOf(QLatin1StringView(" " + g_options.package.toUtf8())) > -1;
+    QByteArray output;
+    const QStringList psArgs = { "shell"_L1, "ps"_L1, "-p"_L1, QString::number(g_testInfo.pid),
+                                 "|"_L1, "grep"_L1, "-o"_L1, " %1$"_L1.arg(g_options.package) };
+    bool psSuccess = false;
+    for (int i = 1; i <= 3; ++i) {
+        psSuccess = execAdbCommand(psArgs, &output, false);
+        if (psSuccess)
+            break;
+        QThread::msleep(250);
+    }
+
+    return psSuccess && output.trimmed() == g_options.package.toUtf8();
 }
 
 static void waitForStartedAndFinished()
