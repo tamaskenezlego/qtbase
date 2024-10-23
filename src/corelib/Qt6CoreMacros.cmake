@@ -652,17 +652,7 @@ function(qt6_add_executable target)
         return()
     endif()
 
-    # Defer the finalization if we can. When the caller's project requires
-    # CMake 3.19 or later, this makes the calls to this function concise while
-    # still allowing target property modification before finalization.
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
-        # Need to wrap in an EVAL CODE or else ${target} won't be evaluated
-        # due to special behavior of cmake_language() argument handling
-        cmake_language(EVAL CODE "cmake_language(DEFER CALL qt6_finalize_target ${target})")
-    else()
-        set_target_properties("${target}" PROPERTIES _qt_is_immediately_finalized TRUE)
-        qt6_finalize_target("${target}")
-    endif()
+    _qt_internal_finalize_target_defer("${target}")
 endfunction()
 
 # Just like for qt_add_resources, we should disable zstd compression when cross-compiling to a
@@ -859,6 +849,22 @@ function(qt6_finalize_target target)
     endif()
 
     set_target_properties(${target} PROPERTIES _qt_is_finalized TRUE)
+endfunction()
+
+function(_qt_internal_finalize_target_defer target)
+    # Defer the finalization if we can. When the caller's project requires
+    # CMake 3.19 or later, this makes the calls to this function concise while
+    # still allowing target property modification before finalization.
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
+        # Need to wrap in an EVAL CODE or else ${target} won't be evaluated
+        # due to special behavior of cmake_language() argument handling
+        cmake_language(EVAL CODE "cmake_language(DEFER CALL qt6_finalize_target ${target})")
+    elseif(QT_BUILDING_QT AND QT_INTERNAL_USE_POOR_MANS_SCOPE_FINALIZER)
+        qt_add_list_file_finalizer(qt6_finalize_target "${target}")
+    else()
+        set_target_properties("${target}" PROPERTIES _qt_is_immediately_finalized TRUE)
+        qt6_finalize_target("${target}")
+    endif()
 endfunction()
 
 function(_qt_internal_finalize_source_groups target)
@@ -2628,17 +2634,7 @@ function(qt6_add_plugin target)
         return()
     endif()
 
-    # Defer the finalization if we can. When the caller's project requires
-    # CMake 3.19 or later, this makes the calls to this function concise while
-    # still allowing target property modification before finalization.
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
-        # Need to wrap in an EVAL CODE or else ${target} won't be evaluated
-        # due to special behavior of cmake_language() argument handling
-        cmake_language(EVAL CODE "cmake_language(DEFER CALL qt6_finalize_target ${target})")
-    else()
-        set_target_properties("${target}" PROPERTIES _qt_is_immediately_finalized TRUE)
-        qt6_finalize_target("${target}")
-    endif()
+    _qt_internal_finalize_target_defer("${target}")
 endfunction()
 
 if(NOT QT_NO_CREATE_VERSIONLESS_FUNCTIONS)
@@ -2664,17 +2660,7 @@ function(qt6_add_library target)
         return()
     endif()
 
-    # Defer the finalization if we can. When the caller's project requires
-    # CMake 3.19 or later, this makes the calls to this function concise while
-    # still allowing target property modification before finalization.
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.19)
-        # Need to wrap in an EVAL CODE or else ${target} won't be evaluated
-        # due to special behavior of cmake_language() argument handling
-        cmake_language(EVAL CODE "cmake_language(DEFER CALL qt6_finalize_target ${target})")
-    else()
-        set_target_properties("${target}" PROPERTIES _qt_is_immediately_finalized TRUE)
-        qt6_finalize_target("${target}")
-    endif()
+    _qt_internal_finalize_target_defer("${target}")
 endfunction()
 
 # Creates a library target by forwarding the arguments to add_library.
