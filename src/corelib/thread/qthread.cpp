@@ -495,11 +495,8 @@ QThread::~QThread()
     Q_D(QThread);
     {
         QMutexLocker locker(&d->mutex);
-        if (d->isInFinish) {
-            locker.unlock();
-            wait();
-            locker.relock();
-        }
+        if (d->isInFinish)
+            d->wait(locker, QDeadlineTimer::Forever);
         if (d->running && !d->finished && !d->data->isAdopted)
             qFatal("QThread: Destroyed while thread is still running");
 

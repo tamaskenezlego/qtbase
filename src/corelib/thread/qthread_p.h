@@ -198,6 +198,8 @@ public:
     uint stackSize;
     std::underlying_type_t<QThread::Priority> priority;
 
+    bool wait(QMutexLocker<QMutex> &locker, QDeadlineTimer deadline);
+
 #ifdef Q_OS_UNIX
     QWaitCondition thread_done;
 
