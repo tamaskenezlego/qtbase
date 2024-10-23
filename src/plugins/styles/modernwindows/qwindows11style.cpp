@@ -24,6 +24,9 @@
 #if QT_CONFIG(datetimeedit)
 #  include <QtWidgets/qdatetimeedit.h>
 #endif
+#if QT_CONFIG(tabwidget)
+#  include <QtWidgets/qtabwidget.h>
+#endif
 #include "qdrawutil.h"
 #include <chrono>
 
@@ -2000,7 +2003,10 @@ QSize QWindows11Style::sizeFromContents(ContentsType type, const QStyleOption *o
             constexpr int hPadding = 2 * 11;
             constexpr int itemHeight = 32;
             contentSize.setWidth(contentSize.width() + hMargin + hPadding);
-            contentSize.setHeight(itemHeight);
+#if QT_CONFIG(tabwidget)
+            if (widget->parent() && !qobject_cast<const QTabWidget *>(widget->parent()))
+#endif
+                contentSize.setHeight(itemHeight);
         }
         break;
 #endif
