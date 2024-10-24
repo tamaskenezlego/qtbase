@@ -1467,6 +1467,11 @@ qt_configure_add_report_entry(
     CONDITION WASM AND NOT ${EMCC_VERSION} MATCHES ${QT_EMCC_RECOMMENDED_VERSION}
 )
 qt_configure_add_report_entry(
+    TYPE WARNING
+    MESSAGE "Some tests might fail to build when targeting WASM without -feature-thread."
+    CONDITION WASM AND QT_BUILD_TESTS AND NOT QT_FEATURE_thread
+)
+qt_configure_add_report_entry(
     TYPE ERROR
     MESSAGE "Building Qt with C++20 is not supported with MSVC 2019."
     CONDITION QT_FEATURE_cxx20 AND MSVC AND MSVC_VERSION LESS "1930"
