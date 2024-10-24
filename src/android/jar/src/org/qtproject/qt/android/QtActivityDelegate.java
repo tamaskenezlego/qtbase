@@ -329,12 +329,10 @@ class QtActivityDelegate extends QtActivityDelegateBase
     }
     // QtMenuInterface implementation end
 
-    private boolean m_contextMenuVisible = false;
-
     void onCreatePopupMenu(Menu menu)
     {
         QtNative.fillContextMenu(menu);
-        m_contextMenuVisible = true;
+        setContextMenuVisible(true);
     }
 
     @Override
