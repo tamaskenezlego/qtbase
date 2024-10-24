@@ -1263,6 +1263,23 @@ void tst_QDebug::qDebugStdOptional() const
     QCOMPARE(QString::fromLatin1(s_file), file);
     QCOMPARE(s_line, line);
     QCOMPARE(QString::fromLatin1(s_function), function);
+
+    /* simpler tests from now on */
+    // const
+    qDebug() << std::optional<const int>(42) << std::optional<const int>(std::nullopt);
+    QCOMPARE(s_msg, R"(std::optional(42) nullopt)"_L1);
+    // nested
+    {
+        auto d = qDebug();
+        // the constructors would do the wrong thing (convert payload types), so use emplace()
+        std::optional<std::optional<int>> opt;
+        d << opt;
+        opt.emplace();
+        d << opt;
+        *opt = 42;
+        d << opt;
+    }
+    QCOMPARE(s_msg, R"(nullopt std::optional(nullopt) std::optional(std::optional(42)))"_L1);
 }
 
 void tst_QDebug::textStreamModifiers() const
