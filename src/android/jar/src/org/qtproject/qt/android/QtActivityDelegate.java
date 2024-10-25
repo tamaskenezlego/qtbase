@@ -43,7 +43,6 @@ class QtActivityDelegate extends QtActivityDelegateBase
 
     private View m_dummyView = null;
     private final HashMap<Integer, View> m_nativeViews = new HashMap<>();
-    private QtAccessibilityDelegate m_accessibilityDelegate = null;
 
     QtActivityDelegate(Activity activity)
     {
@@ -248,49 +247,37 @@ class QtActivityDelegate extends QtActivityDelegateBase
     @Override
     public void notifyLocationChange(int viewId)
     {
-        if (m_accessibilityDelegate == null)
-            return;
-        m_accessibilityDelegate.notifyLocationChange(viewId);
+        getAccessibilityDelegate().notifyLocationChange(viewId);
     }
 
     @Override
     public void notifyObjectHide(int viewId, int parentId)
     {
-        if (m_accessibilityDelegate == null)
-            return;
-        m_accessibilityDelegate.notifyObjectHide(viewId, parentId);
+        getAccessibilityDelegate().notifyObjectHide(viewId, parentId);
     }
 
     @Override
     public void notifyObjectShow(int parentId)
     {
-        if (m_accessibilityDelegate == null)
-           return;
-        m_accessibilityDelegate.notifyObjectShow(parentId);
+        getAccessibilityDelegate().notifyObjectShow(parentId);
     }
 
     @Override
     public void notifyObjectFocus(int viewId)
     {
-        if (m_accessibilityDelegate == null)
-            return;
-        m_accessibilityDelegate.notifyObjectFocus(viewId);
+        getAccessibilityDelegate().notifyObjectFocus(viewId);
     }
 
     @Override
     public void notifyValueChanged(int viewId, String value)
     {
-        if (m_accessibilityDelegate == null)
-            return;
-        m_accessibilityDelegate.notifyValueChanged(viewId, value);
+        getAccessibilityDelegate().notifyValueChanged(viewId, value);
     }
 
     @Override
     public void notifyScrolledEvent(int viewId)
     {
-        if (m_accessibilityDelegate == null)
-            return;
-        m_accessibilityDelegate.notifyScrolledEvent(viewId);
+        getAccessibilityDelegate().notifyScrolledEvent(viewId);
     }
 
     @Override
@@ -298,10 +285,7 @@ class QtActivityDelegate extends QtActivityDelegateBase
     {
         QtNative.runAction(() -> {
             // FIXME make QtAccessibilityDelegate window based
-            if (m_layout != null)
-                m_accessibilityDelegate = new QtAccessibilityDelegate(m_layout);
-            else
-                Log.w(QtTAG, "Null layout, failed to initialize accessibility delegate.");
+            getAccessibilityDelegate().initLayoutAccessibility(m_layout);
         });
     }
 
