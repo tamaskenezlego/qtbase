@@ -214,7 +214,7 @@ QThreadData *QThreadData::current(bool createIfNecessary)
         }
         data->deref();
         data->isAdopted = true;
-        data->threadId.storeRelaxed(to_HANDLE(pthread_self()));
+        data->threadId.storeRelaxed(QThread::currentThreadId());
         if (!QCoreApplicationPrivate::theMainThreadId.loadAcquire()) {
             auto *mainThread = data->thread.loadRelaxed();
             mainThread->setObjectName("Qt mainThread");
@@ -325,8 +325,7 @@ void *QThreadPrivate::start(void *arg)
             }
 
             // threadId is set in QThread::start()
-            Q_ASSERT(pthread_equal(from_HANDLE<pthread_t>(data->threadId.loadRelaxed()),
-                                   pthread_self()));
+            Q_ASSERT(data->threadId.loadRelaxed() == QThread::currentThreadId());
 
             data->ref();
             data->quitNow = thr->d_func()->exited;
@@ -829,7 +828,7 @@ bool QThread::wait(QDeadlineTimer deadline)
     Q_D(QThread);
     QMutexLocker locker(&d->mutex);
 
-    if (from_HANDLE<pthread_t>(d->data->threadId.loadRelaxed()) == pthread_self()) {
+    if (isCurrentThread()) {
         qWarning("QThread::wait: Thread tried to wait on itself");
         return false;
     }
