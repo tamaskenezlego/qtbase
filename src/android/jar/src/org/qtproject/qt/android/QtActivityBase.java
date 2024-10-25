@@ -32,7 +32,7 @@ public class QtActivityBase extends Activity
     private boolean m_retainNonConfigurationInstance = false;
     private Configuration m_prevConfig;
 
-    private QtActivityDelegate m_delegate;
+    private final QtActivityDelegate m_delegate;
 
     public static final String EXTRA_SOURCE_INFO = "org.qtproject.qt.android.sourceInfo";
 
@@ -83,6 +83,11 @@ public class QtActivityBase extends Activity
         Runtime.getRuntime().exit(0);
     }
 
+    public QtActivityBase()
+    {
+        m_delegate = new QtActivityDelegate(this);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -101,8 +106,6 @@ public class QtActivityBase extends Activity
             // so for now restart the whole app.
             restartApplication();
         }
-
-        m_delegate = new QtActivityDelegate(this);
 
         QtNative.registerAppStateListener(m_delegate);
 
