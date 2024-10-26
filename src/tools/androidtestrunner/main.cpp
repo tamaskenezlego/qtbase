@@ -422,7 +422,7 @@ static void waitForLoggingStarted()
 
     QDeadlineTimer deadline(5000);
     do {
-        if (execAdbCommand(adbLsCmd))
+        if (execAdbCommand(adbLsCmd, nullptr, false))
             break;
         QThread::msleep(100);
     } while (!deadline.hasExpired() && !g_testInfo.isTestRunnerInterrupted.load());
@@ -694,7 +694,7 @@ static int testExitCode()
 {
     QByteArray exitCodeOutput;
     const QString exitCodeCmd = "cat files/qtest_last_exit_code 2> /dev/null"_L1;
-    if (!execAdbCommand({ "shell"_L1, runCommandAsUserArgs(exitCodeCmd) }, &exitCodeOutput))
+    if (!execAdbCommand({ "shell"_L1, runCommandAsUserArgs(exitCodeCmd) }, &exitCodeOutput, false))
         return EXIT_ERROR;
 
     bool ok;
