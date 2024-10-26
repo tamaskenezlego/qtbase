@@ -13,6 +13,7 @@
 #include <QtCore/QThread>
 #include <QtCore/QXmlStreamReader>
 #include <QtCore/QFileInfo>
+#include <QtCore/QSysInfo>
 
 #include <atomic>
 #include <csignal>
@@ -598,91 +599,80 @@ void printLogcat(const QString &formattedTime)
         return;
     }
 
-    qDebug() << "****** Begin logcat output ******";
+    qDebug() << "********** logcat dump **********";
     qDebug().noquote() << logcat;
-    qDebug() << "****** End logcat output ******";
+    qDebug() << "********** End logcat dump **********";
 }
 
-static QString getDeviceABI()
+static QString getAbiLibsPath()
 {
+    QString libsPath = "%1/libs/"_L1.arg(g_options.buildPath);
     const QStringList abiArgs = { "shell"_L1, "getprop"_L1, "ro.product.cpu.abi"_L1 };
     QByteArray abi;
     if (!execAdbCommand(abiArgs, &abi, false)) {
-        qWarning() << "Warning: failed to get the device abi, fallback to first libs dir";
-        return {};
+        QStringList subDirs = QDir(libsPath).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        if (!subDirs.isEmpty())
+            abi = subDirs.first().toUtf8();
     }
 
-    return QString::fromUtf8(abi.simplified());
+    abi = abi.trimmed();
+    if (abi.isEmpty())
+        qWarning() << "Failed to get the libs abi, falling to host architecture";
+
+    QString hostArch = QSysInfo::currentCpuArchitecture();
+    if (hostArch == "x86_64"_L1)
+        abi = "arm64-x86_64";
+    else if (hostArch == "arm64"_L1)
+        abi = "arm64-v8a";
+    else if (hostArch == "i386"_L1)
+        abi = "x86";
+    else
+        abi = "armeabi-v7a";
+
+    return libsPath + QString::fromUtf8(abi);
 }
 
 void printLogcatCrashBuffer(const QString &formattedTime)
 {
-    bool useNdkStack = false;
-    auto libsPath = "%1/libs/"_L1.arg(g_options.buildPath);
+    QStringList adbCrashArgs = {"logcat"_L1, "-d"_L1, "-b"_L1, "crash"_L1, "-t"_L1, formattedTime};
+    QByteArray crashOutput;
+
+    if (!execAdbCommand(adbCrashArgs, &crashOutput, false)) {
+        qCritical() << "Error: failed to run adb logcat crash command";
+        return;
+    }
+
+    // No crash report, do nothing
+    if (crashOutput.isEmpty())
+        return;
 
     if (!g_options.ndkStackPath.isEmpty()) {
-        QString abi = getDeviceABI();
-        if (abi.isEmpty()) {
-            QStringList subDirs = QDir(libsPath).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-            if (!subDirs.isEmpty())
-                abi = subDirs.first();
-        }
+        QProcess ndkStackProc;
+        ndkStackProc.start(g_options.ndkStackPath, { "-sym"_L1, getAbiLibsPath() });
 
-        if (!abi.isEmpty()) {
-            libsPath += abi;
-            useNdkStack = true;
+        if (ndkStackProc.waitForStarted()) {
+            ndkStackProc.write(crashOutput);
+            ndkStackProc.closeWriteChannel();
+
+            if (ndkStackProc.waitForReadyRead())
+                crashOutput = ndkStackProc.readAllStandardOutput();
+
+            ndkStackProc.terminate();
+            if (!ndkStackProc.waitForFinished())
+                qCritical() << "Error: ndk-stack command timed out.";
         } else {
-            qWarning() << "Warning: failed to get the libs abi, ndk-stack cannot be used.";
+            qCritical() << "Error: failed to run ndk-stack command.";
+            return;
         }
     } else {
         qWarning() << "Warning: ndk-stack path not provided and couldn't be deduced "
                       "using the ANDROID_NDK_ROOT environment variable.";
     }
 
-    QProcess adbCrashProcess;
-    QProcess ndkStackProcess;
-
-    if (useNdkStack) {
-        adbCrashProcess.setStandardOutputProcess(&ndkStackProcess);
-        ndkStackProcess.start(g_options.ndkStackPath, { "-sym"_L1, libsPath });
-    }
-
-    QStringList adbCrashArgs = {"logcat"_L1, "-d"_L1, "-b"_L1, "crash"_L1, "-t"_L1, formattedTime};
-    if (!g_options.serial.isEmpty())
-        adbCrashArgs = QStringList{"-s"_L1 + g_options.serial} + adbCrashArgs;
-
-    adbCrashProcess.start(g_options.adbCommand, adbCrashArgs);
-
-    if (!adbCrashProcess.waitForStarted()) {
-        qCritical() << "Error: failed to run adb logcat crash command.";
-        return;
-    }
-
-    if (!adbCrashProcess.waitForFinished()) {
-        qCritical() << "Error: adb command timed out.";
-        return;
-    }
-
-    if (useNdkStack) {
-        if (!ndkStackProcess.waitForStarted()) {
-            qCritical() << "Error: failed to run ndk-stack command.";
-            return;
-        }
-
-        if (!ndkStackProcess.waitForFinished()) {
-            qCritical() << "Error: ndk-stack command timed out.";
-            return;
-        }
-    }
-
-    const QByteArray crash = useNdkStack ? ndkStackProcess.readAllStandardOutput()
-                                         : adbCrashProcess.readAllStandardOutput();
-    if (crash.isEmpty())
-        return;
-
-    qDebug() << "****** Begin logcat crash buffer output ******";
-    qDebug().noquote() << crash;
-    qDebug() << "****** End logcat crash buffer output ******";
+    if (!crashOutput.startsWith("********** Crash dump"))
+        qDebug() << "********** Crash dump: **********";
+    qDebug().noquote() << crashOutput;
+    qDebug() << "********** End crash dump **********";
 }
 
 static QString getCurrentTimeString()
