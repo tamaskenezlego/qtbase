@@ -3,6 +3,7 @@
 
 #include <QtNetwork/qtnetworkglobal.h>
 
+#include <QtCore/qoperatingsystemversion.h>
 #include <QtCore/qsystemdetection.h>
 
 #if QT_CONFIG(ssl)
