@@ -304,6 +304,7 @@ qt_internal_add_module(Core
         tools/qsharedpointer.cpp tools/qsharedpointer.h
         tools/qsharedpointer_impl.h
         tools/qsize.cpp tools/qsize.h
+        tools/qsmallbytearray_p.h
         tools/qspan.h
         tools/qspan_p.h
         tools/qstack.h
