@@ -135,6 +135,7 @@ private slots:
     void QTBUG_6986_sendMouseEventToAlienWidget();
     void mapToGlobal();
     void mapToGlobalWithoutScene();
+    void mapToGlobalIgnoreTranformation();
     void QTBUG_43780_visibility();
 #if QT_CONFIG(wheelevent)
     void wheelEventPropagation();
@@ -3550,6 +3551,55 @@ void tst_QGraphicsProxyWidget::mapToGlobalWithoutScene() // QTBUG-44509
     const QPoint localPos(0, 0);
     const QPoint globalPos = embeddedWidget->mapToGlobal(localPos);
     QCOMPARE(embeddedWidget->mapFromGlobal(globalPos), localPos);
+}
+
+// QTBUG-128913,  QGraphicsProxyWidget with ItemIgnoresTransformations
+void tst_QGraphicsProxyWidget::mapToGlobalIgnoreTranformation()
+{
+    const QRect availableGeometry = QGuiApplication::primaryScreen()->availableGeometry();
+    const QSize size = availableGeometry.size() / 2;
+    QGraphicsScene scene;
+    QGraphicsView view(&scene);
+    view.setWindowTitle(QLatin1StringView(QTest::currentTestFunction()));
+    view.setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    view.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    view.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    view.setTransform(QTransform::fromScale(2, 2));
+    view.resize(size);
+    view.move(availableGeometry.bottomRight() - QPoint(size.width(), size.height())
+              - QPoint(100, 100));
+
+    static constexpr int labelWidth = 200;
+    static constexpr int labelHeight = 50;
+    auto *transforming = new QGraphicsProxyWidget();
+    auto *transformingLabel = new QLabel("Transforming"_L1);
+    transformingLabel->resize(labelWidth, labelHeight);
+    transforming->setWidget(transformingLabel);
+    transforming->setPos(0, 0);
+    scene.addItem(transforming);
+
+    auto *nonTransforming = new QGraphicsProxyWidget();
+    nonTransforming->setFlag(QGraphicsItem::ItemIgnoresTransformations);
+    auto *nonTransformingLabel = new QLabel("NonTransforming"_L1);
+    nonTransformingLabel->resize(labelWidth, labelHeight);
+    nonTransforming->setWidget(nonTransformingLabel);
+    nonTransforming->setPos(labelWidth, 0);
+    scene.addItem(nonTransforming);
+
+    view.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&view));
+
+    const QPoint labelCenter{ labelWidth / 2, labelHeight / 2 };
+    const QPoint topPos = view.geometry().topLeft() + view.viewport()->geometry().topLeft();
+    const QPoint transformingGlobal = transformingLabel->mapToGlobal(labelCenter);
+    const QPoint nonTransformingGlobal = nonTransformingLabel->mapToGlobal(labelCenter);
+
+    // Center of label at 0,0 scaled by 2 should match size
+    QCOMPARE(transformingGlobal - topPos, QPoint(labelWidth, labelHeight));
+
+    // Center of non-transforming label at 200 (scaled by 2), 0
+    QCOMPARE(nonTransformingGlobal - topPos,
+             QPoint(labelWidth * 2 + labelWidth / 2, labelHeight / 2));
 }
 
 // QTBUG_43780: Embedded widgets have isWindow()==true but showing them should not
