@@ -12658,8 +12658,8 @@ static MapToGlobalTransformResult mapToGlobalTransform(const QWidget *w)
             break;
         }
 
-        const QPoint topLeft = w->geometry().topLeft();
-        result.transform.translate(topLeft.x(), topLeft.y());
+        const auto &geometry = w->geometry();
+        result.transform *= QTransform::fromTranslate(geometry.x(), geometry.y());
         if (w->isWindow())
             break;
     }
