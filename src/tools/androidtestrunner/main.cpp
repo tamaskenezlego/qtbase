@@ -694,8 +694,10 @@ static int testExitCode()
 {
     QByteArray exitCodeOutput;
     const QString exitCodeCmd = "cat files/qtest_last_exit_code 2> /dev/null"_L1;
-    if (!execAdbCommand({ "shell"_L1, runCommandAsUserArgs(exitCodeCmd) }, &exitCodeOutput, false))
+    if (!execAdbCommand({ "shell"_L1, runCommandAsUserArgs(exitCodeCmd) }, &exitCodeOutput, false)) {
+        qCritical() << "Failed to retrieve the test exit code.";
         return EXIT_ERROR;
+    }
 
     bool ok;
     int exitCode = exitCodeOutput.toInt(&ok);
