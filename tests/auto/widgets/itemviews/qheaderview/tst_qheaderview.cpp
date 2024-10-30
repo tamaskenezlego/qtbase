@@ -2926,24 +2926,26 @@ void tst_QHeaderView::calculateAndCheck(int cppline, const int precalced_compare
 
     const bool sanity_checks = true;
     if (sanity_checks) {
-        QString msg = QString("sanity problem at ") + sline;
-        const QScopedArrayPointer<char> holder(QTest::toString(msg));
-        const auto verifytext = holder.data();
+        const QString msg = QString("sanity problem at ") + sline;
+        auto diagnostics = qScopeGuard([msg]{
+            qWarning() << msg;
+        });
 
-        QVERIFY2(m_tableview->model()->rowCount() == view->count() , verifytext);
-        QVERIFY2(view->visualIndex(lastindex + 1) <= 0, verifytext);       // there is no such index in model
-        QVERIFY2(view->logicalIndex(lastindex + 1) <= 0, verifytext);      // there is no such index in model.
-        QVERIFY2(view->logicalIndex(lastindex + 1) <= 0, verifytext);      // there is no such index in model.
-        QVERIFY2(lastindex < 0 || view->visualIndex(0) >= 0, verifytext);   // no rows or legal index
-        QVERIFY2(lastindex < 0 || view->logicalIndex(0) >= 0, verifytext);  // no rows or legal index
-        QVERIFY2(lastindex < 0 || view->visualIndex(lastindex) >= 0, verifytext);  // no rows or legal index
-        QVERIFY2(lastindex < 0 || view->logicalIndex(lastindex) >= 0, verifytext); // no rows or legal index
-        QVERIFY2(view->visualIndexAt(-1) == -1, verifytext);
-        QVERIFY2(view->logicalIndexAt(-1) == -1, verifytext);
-        QVERIFY2(view->visualIndexAt(view->length()) == -1, verifytext);
-        QVERIFY2(view->logicalIndexAt(view->length()) == -1, verifytext);
-        QVERIFY2(sum_visual == sum_logical, verifytext);
-        QVERIFY2(sum_to_last_index == sum_logical, verifytext);
+        QCOMPARE(m_tableview->model()->rowCount(), view->count());
+        QCOMPARE_LE(view->visualIndex(lastindex + 1), 0);       // there is no such index in model
+        QCOMPARE_LE(view->logicalIndex(lastindex + 1), 0);      // there is no such index in model.
+        QCOMPARE_LE(view->logicalIndex(lastindex + 1), 0);      // there is no such index in model.
+        QCOMPARE_GE(lastindex < 0 || view->visualIndex(0),  0);   // no rows or legal index
+        QCOMPARE_GE(lastindex < 0 || view->logicalIndex(0), 0);  // no rows or legal index
+        QCOMPARE_GE(lastindex < 0 || view->visualIndex(lastindex), 0);  // no rows or legal index
+        QCOMPARE_GE(lastindex < 0 || view->logicalIndex(lastindex), 0); // no rows or legal index
+        QCOMPARE(view->visualIndexAt(-1), -1);
+        QCOMPARE(view->logicalIndexAt(-1), -1);
+        QCOMPARE(view->visualIndexAt(view->length()), -1);
+        QCOMPARE(view->logicalIndexAt(view->length()), -1);
+        QCOMPARE(sum_visual, sum_logical);
+        QCOMPARE(sum_to_last_index, sum_logical);
+        diagnostics.dismiss();
     }
 
     // Semantic test
@@ -2960,16 +2962,18 @@ void tst_QHeaderView::calculateAndCheck(int cppline, const int precalced_compare
     msg += istr(chk_visual) + istr(chk_logical) + istr(chk_sizes) + istr(chk_hidden_size)
         + istr(chk_lookup_visual) + istr(chk_lookup_logical) + istr(header_lenght, false) + "};";
 
-    const QScopedArrayPointer<char> holder(QTest::toString(msg));
-    const auto verifytext = holder.data();
+    auto diagnostics = qScopeGuard([msg]{
+        qWarning() << msg;
+    });
 
-    QVERIFY2(chk_visual            == x[0], verifytext);
-    QVERIFY2(chk_logical           == x[1], verifytext);
-    QVERIFY2(chk_sizes             == x[2], verifytext);
-    QVERIFY2(chk_hidden_size       == x[3], verifytext);
-    QVERIFY2(chk_lookup_visual     == x[4], verifytext);
-    QVERIFY2(chk_lookup_logical    == x[5], verifytext);
-    QVERIFY2(header_lenght         == x[6], verifytext);
+    QCOMPARE(chk_visual         , x[0]);
+    QCOMPARE(chk_logical        , x[1]);
+    QCOMPARE(chk_sizes          , x[2]);
+    QCOMPARE(chk_hidden_size    , x[3]);
+    QCOMPARE(chk_lookup_visual  , x[4]);
+    QCOMPARE(chk_lookup_logical , x[5]);
+    QCOMPARE(header_lenght      , x[6]);
+    diagnostics.dismiss();
 }
 
 void tst_QHeaderView::setupTestData(bool also_use_reset_model)
