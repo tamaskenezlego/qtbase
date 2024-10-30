@@ -41,7 +41,7 @@ abstract class QtActivityDelegateBase
     protected final HashMap<Integer, QtWindow> m_topLevelWindows = new HashMap<>();
     protected final QtDisplayManager m_displayManager;
     protected final QtInputDelegate m_inputDelegate;
-    private final QtAccessibilityDelegate m_accessibilityDelegate;
+    protected final QtAccessibilityDelegate m_accessibilityDelegate;
 
     private boolean m_membersInitialized = false;
     private boolean m_contextMenuVisible = false;
@@ -70,10 +70,6 @@ abstract class QtActivityDelegateBase
 
     QtInputDelegate getInputDelegate() {
         return m_inputDelegate;
-    }
-
-    QtAccessibilityDelegate getAccessibilityDelegate() {
-        return m_accessibilityDelegate;
     }
 
     void setContextMenuVisible(boolean contextMenuVisible)

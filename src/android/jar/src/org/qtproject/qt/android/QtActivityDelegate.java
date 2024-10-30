@@ -247,37 +247,37 @@ class QtActivityDelegate extends QtActivityDelegateBase
     @Override
     public void notifyLocationChange(int viewId)
     {
-        getAccessibilityDelegate().notifyLocationChange(viewId);
+        m_accessibilityDelegate.notifyLocationChange(viewId);
     }
 
     @Override
     public void notifyObjectHide(int viewId, int parentId)
     {
-        getAccessibilityDelegate().notifyObjectHide(viewId, parentId);
+        m_accessibilityDelegate.notifyObjectHide(viewId, parentId);
     }
 
     @Override
     public void notifyObjectShow(int parentId)
     {
-        getAccessibilityDelegate().notifyObjectShow(parentId);
+        m_accessibilityDelegate.notifyObjectShow(parentId);
     }
 
     @Override
     public void notifyObjectFocus(int viewId)
     {
-        getAccessibilityDelegate().notifyObjectFocus(viewId);
+        m_accessibilityDelegate.notifyObjectFocus(viewId);
     }
 
     @Override
     public void notifyValueChanged(int viewId, String value)
     {
-        getAccessibilityDelegate().notifyValueChanged(viewId, value);
+        m_accessibilityDelegate.notifyValueChanged(viewId, value);
     }
 
     @Override
     public void notifyScrolledEvent(int viewId)
     {
-        getAccessibilityDelegate().notifyScrolledEvent(viewId);
+        m_accessibilityDelegate.notifyScrolledEvent(viewId);
     }
 
     @Override
@@ -285,7 +285,7 @@ class QtActivityDelegate extends QtActivityDelegateBase
     {
         QtNative.runAction(() -> {
             // FIXME make QtAccessibilityDelegate window based
-            getAccessibilityDelegate().initLayoutAccessibility(m_layout);
+            m_accessibilityDelegate.initLayoutAccessibility(m_layout);
         });
     }
 
