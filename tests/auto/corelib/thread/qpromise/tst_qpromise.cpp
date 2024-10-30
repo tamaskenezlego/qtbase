@@ -97,10 +97,10 @@ struct ThreadWrapper
     {
         t->start();
     }
-    void join() { t->wait(); }
-    ~ThreadWrapper()
+    void join() { QVERIFY(t->wait(60s)); }
+    ~ThreadWrapper() noexcept(false)
     {
-        t->wait();
+        join();
     }
 };
 #endif
