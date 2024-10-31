@@ -10,6 +10,7 @@
 #include <qimageiohandler.h>
 #include <qfile.h>
 #include <qimagereader.h>
+#include <qlibraryinfo.h>
 #include "pluginlog.h"
 
 class tst_QImageIOHandler : public QObject
@@ -40,6 +41,7 @@ private slots:
 private:
     QString m_prefix;
     QList<QByteArray> m_supportedReadFormats;
+    bool m_testPluginFoundLast = false;
 };
 
 class MyImageIOHandler : public QImageIOHandler
@@ -54,6 +56,7 @@ tst_QImageIOHandler::tst_QImageIOHandler()
 {
     m_prefix = QFINDTESTDATA("images/");
     m_supportedReadFormats = QImageReader::supportedImageFormats();
+    m_testPluginFoundLast = QLibraryInfo::isSharedBuild();
 }
 
 tst_QImageIOHandler::~tst_QImageIOHandler()
@@ -95,8 +98,12 @@ void tst_QImageIOHandler::pluginRead_data()
     QTest::newRow("unknown-suffix") << "black" << "bar" << QStringList({ "formatname-unmatched", "contents-unmatched" });
     if (m_supportedReadFormats.contains("jpeg"))
         QTest::newRow("wrong-suffix2") << "white" << "foo" << QStringList({ "formatname-matched" });
-    if (m_supportedReadFormats.contains("gif"))
-        QTest::newRow("plugin-writeonly") << "cyan" << "gif" << QStringList();
+    if (m_supportedReadFormats.contains("gif")) {
+        if (m_testPluginFoundLast)
+            QTest::newRow("plugin-writeonly") << "cyan" << "gif" << QStringList();
+        else
+            QTest::newRow("plugin-writeonly") << "cyan" << "gif" << QStringList({ "formatname-matched" });
+    }
 }
 
 void tst_QImageIOHandler::pluginRead()
@@ -129,7 +136,12 @@ void tst_QImageIOHandler::pluginNoAutoDetection_data()
     QTest::newRow("wrong-suffix") << "yellow" << "jpg" << QStringList() << false;
     QTest::newRow("unknown-suffix") << "black" << "bar" << QStringList() << false;
     QTest::newRow("wrong-suffix2") << "white" << "foo" << QStringList({ "formatname-matched" }) << false;
-    QTest::newRow("plugin-writeonly") << "cyan" << "gif" << QStringList() << true;
+    if (m_supportedReadFormats.contains("gif")) {
+        if (m_testPluginFoundLast)
+            QTest::newRow("plugin-writeonly") << "cyan" << "gif" << QStringList() << true;
+        else
+            QTest::newRow("plugin-writeonly") << "cyan" << "gif" << QStringList({ "formatname-matched" }) << true;
+    }
 }
 
 void tst_QImageIOHandler::pluginNoAutoDetection()
@@ -175,8 +187,12 @@ void tst_QImageIOHandler::pluginDecideFromContent_data()
     QTest::newRow("no-suffix") << "blue" << "" << QStringList({ "contents-matched" });
     QTest::newRow("wrong-suffix") << "yellow" << "jpg" << QStringList({ "contents-matched" });
     QTest::newRow("unknown-suffix") << "black" << "bar" << QStringList({ "contents-unmatched" });
-    if (m_supportedReadFormats.contains("jpeg"))
-        QTest::newRow("wrong-suffix2") << "white" << "foo" << QStringList();
+    if (m_supportedReadFormats.contains("jpeg")) {
+        if (m_testPluginFoundLast)
+            QTest::newRow("wrong-suffix2") << "white" << "foo" << QStringList();
+        else
+            QTest::newRow("wrong-suffix2") << "white" << "foo" << QStringList({ "contents-unmatched" });
+    }
 }
 
 void tst_QImageIOHandler::pluginDecideFromContent()
