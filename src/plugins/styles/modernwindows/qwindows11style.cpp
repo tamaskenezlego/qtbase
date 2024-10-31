@@ -2149,7 +2149,8 @@ void QWindows11Style::polish(QWidget* widget)
         auto pal = widget->palette();
         pal.setColor(widget->backgroundRole(), Qt::transparent);
         widget->setPalette(pal);
-        if (!isScrollBar) { // for menus and combobox containers...
+        if (!isScrollBar
+            && widget->graphicsProxyWidget() == nullptr) { // for menus and combobox containers...
             QGraphicsDropShadowEffect* dropshadow = new QGraphicsDropShadowEffect(widget);
             dropshadow->setBlurRadius(3);
             dropshadow->setXOffset(3);
