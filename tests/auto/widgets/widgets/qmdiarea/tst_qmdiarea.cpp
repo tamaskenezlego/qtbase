@@ -2,27 +2,27 @@
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 
 
-#include <QTest>
-#include <QSignalSpy>
-#include <QMdiSubWindow>
-#include <QMdiArea>
+#include <QtTest/qtest.h>
+#include <QtTest/qsignalspy.h>
 
-#include <QApplication>
-#include <QMainWindow>
-#include <QMenuBar>
-#include <QPushButton>
-#include <QStyle>
-#include <QStyleOption>
-#include <QVBoxLayout>
-#include <QLineEdit>
-#include <QDockWidget>
-#include <QScrollBar>
-#include <QTextEdit>
+#include <QtWidgets/qapplication.h>
+#include <QtWidgets/qboxlayout.h>
+#include <QtWidgets/qdockwidget.h>
+#include <QtWidgets/qlineedit.h>
+#include <QtWidgets/qmainwindow.h>
+#include <QtWidgets/qmdiarea.h>
+#include <QtWidgets/qmdisubwindow.h>
+#include <QtWidgets/qmenubar.h>
+#include <QtWidgets/qpushbutton.h>
+#include <QtWidgets/qscrollbar.h>
+#include <QtWidgets/qstyle.h>
+#include <QtWidgets/qstyleoption.h>
+#include <QtWidgets/qtextedit.h>
+
+#include <QtGui/qstylehints.h>
 #ifndef QT_NO_OPENGL
-#include <QtOpenGL>
-#include <QOpenGLContext>
+#  include <QtGui/qopenglcontext.h>
 #endif
-#include <QStyleHints>
 
 #include <QtWidgets/private/qapplication_p.h>
 
