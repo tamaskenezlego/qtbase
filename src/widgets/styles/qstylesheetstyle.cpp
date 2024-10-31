@@ -3928,10 +3928,9 @@ void QStyleSheetStyle::drawControl(ControlElement ce, const QStyleOption *opt, Q
                 if (qobject_cast<const QComboBox *>(w))
                     drawCheckMark = false; // ignore the checkmarks provided by the QComboMenuDelegate
 #endif
-                int textRectOffset = 0;
+                int textRectOffset = m->maxIconWidth;
                 if (!mi.icon.isNull()) {
                     renderMenuItemIcon(&mi, p, w, opt->rect, subRule);
-                    textRectOffset = m->maxIconWidth;
                 } else if (drawCheckMark) {
                     const bool checkable = mi.checkType != QStyleOptionMenuItem::NotCheckable;
                     const bool checked = checkable ? mi.checked : false;
