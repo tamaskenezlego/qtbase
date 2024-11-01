@@ -223,7 +223,7 @@ class TimeZoneDataWriter (LocaleSourceEditor):
     def msToIana(self, pairs: Iterator[tuple[str, str]]) -> None:
         out: Callable[[str], int] = self.writer.write
         winStore: Callable[[str], int] = self.__windowsTable.append
-        ianaStore: Callable[[str], int] = self.__ianaTable.append
+        ianaStore: Callable[[str], int] = self.__ianaListTable.append
         alias: dict[str, str] = dict(pairs) # {MS name: IANA ID}
 
         out('// Windows ID Key, Windows ID Index, IANA ID Index, UTC Offset\n')
