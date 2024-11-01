@@ -413,9 +413,9 @@ void tst_QPromise::reportFromMultipleThreads()
     promise.start();
 
     ThreadWrapper threads[] = {
-        ThreadWrapper([&promise] () mutable { promise.addResult(42); }),
-        ThreadWrapper([&promise] () mutable { promise.addResult(43); }),
-        ThreadWrapper([&promise] () mutable { promise.addResult(44); }),
+        ThreadWrapper([&promise] { promise.addResult(42); }),
+        ThreadWrapper([&promise] { promise.addResult(43); }),
+        ThreadWrapper([&promise] { promise.addResult(44); }),
     };
     for (auto& t : threads)
         t.join();
@@ -441,9 +441,9 @@ void tst_QPromise::reportFromMultipleThreadsByMovedPromise()
         auto promise = std::move(initialPromise);
         promise.start();
         ThreadWrapper threads[] = {
-            ThreadWrapper([&promise] () mutable { promise.addResult(42); }),
-            ThreadWrapper([&promise] () mutable { promise.addResult(43); }),
-            ThreadWrapper([&promise] () mutable { promise.addResult(44); }),
+            ThreadWrapper([&promise] { promise.addResult(42); }),
+            ThreadWrapper([&promise] { promise.addResult(43); }),
+            ThreadWrapper([&promise] { promise.addResult(44); }),
         };
         for (auto& t : threads)
             t.join();
@@ -497,9 +497,9 @@ void tst_QPromise::cancelWhenDestroyed()
         auto promise = std::move(initialPromise);
         promise.start();
         ThreadWrapper threads[] = {
-            ThreadWrapper([&promise] () mutable { promise.addResult(42); }),
-            ThreadWrapper([&promise] () mutable { promise.addResult(43); }),
-            ThreadWrapper([&promise] () mutable { promise.addResult(44); }),
+            ThreadWrapper([&promise] { promise.addResult(42); }),
+            ThreadWrapper([&promise] { promise.addResult(43); }),
+            ThreadWrapper([&promise] { promise.addResult(44); }),
         };
         for (auto& t : threads)
             t.join();
