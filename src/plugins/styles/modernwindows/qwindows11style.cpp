@@ -2066,6 +2066,14 @@ QSize QWindows11Style::sizeFromContents(ContentsType type, const QStyleOption *o
         break;
     }
 #endif
+    case CT_ComboBox:
+        if (const auto *comboBoxOpt = qstyleoption_cast<const QStyleOptionComboBox *>(option)) {
+            contentSize = QWindowsStyle::sizeFromContents(type, option, size, widget);  // don't rely on QWindowsThemeData
+            contentSize += QSize(4, 4);     // default win11 style margins
+            if (comboBoxOpt->subControls & SC_ComboBoxArrow)
+                contentSize += QSize(8, 0); // arrow margins
+        }
+        break;
     default:
         contentSize = QWindowsVistaStyle::sizeFromContents(type, option, size, widget);
         break;
