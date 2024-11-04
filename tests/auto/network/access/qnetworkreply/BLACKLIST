@@ -11,6 +11,7 @@ opensuse-leap
 b2qt
 ubuntu
 windows-10
+macos-15 # QTBUG-130500
 [putToFtp]
 windows-10
 [backgroundRequest]
