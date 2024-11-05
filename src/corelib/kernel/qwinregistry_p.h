@@ -58,7 +58,6 @@ public:
 
     // ### TODO: Remove once all usages are migrated to new interface.
     QString stringValue(QStringView subKey) const;
-    std::pair<DWORD, bool> dwordValue(QStringView subKey) const;
 
 private:
     HKEY m_key = nullptr;
