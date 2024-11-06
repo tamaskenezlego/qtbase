@@ -56,7 +56,6 @@ public:
         return std::nullopt;
     }
 
-    // ### TODO: Remove once all usages are migrated to new interface.
     QString stringValue(QStringView subKey) const;
 
 private:
