@@ -5617,6 +5617,9 @@ void tst_QNetworkReply::ioPostToHttpsUploadProgress()
 {
     //QFile sourceFile(testDataDir + "/bigfile");
     //QVERIFY(sourceFile.open(QIODevice::ReadOnly));
+    if (QtNetworkTestHelpers::isSecureTransportBlockingTest())
+        QSKIP("SecureTransport: temporary keychain is not working on this version of macOS");
+
     qint64 wantedSize = 2*1024*1024; // 2 MB
     QByteArray sourceFile;
     // And in the case of SSL, the compression can fool us and let the
@@ -9147,6 +9150,9 @@ void tst_QNetworkReply::ioHttpRedirectErrors()
     QFETCH(QNetworkReply::NetworkError, error);
 
     QUrl localhost(url);
+    if (localhost.scheme() == QLatin1String("https") && QtNetworkTestHelpers::isSecureTransportBlockingTest())
+        QSKIP("SecureTransport: temporary keychain is not working on this version of macOS");
+
     MiniHttpServer server("", localhost.scheme() == QLatin1String("https"));
 
     localhost.setPort(server.serverPort());
@@ -9223,6 +9229,8 @@ void tst_QNetworkReply::ioHttpRedirectPolicy()
     QFETCH(const QNetworkRequest::RedirectPolicy, policy);
 
     QFETCH(const bool, ssl);
+    if (ssl && QtNetworkTestHelpers::isSecureTransportBlockingTest())
+        QSKIP("SecureTransport: temporary keychain is not working on this version of macOS");
 
     QFETCH(const int, redirectCount);
     QFETCH(const int, statusCode);
@@ -9305,6 +9313,8 @@ void tst_QNetworkReply::ioHttpRedirectPolicyErrors()
     QVERIFY(policy != QNetworkRequest::ManualRedirectPolicy);
 
     QFETCH(const bool, ssl);
+    if (ssl && QtNetworkTestHelpers::isSecureTransportBlockingTest())
+        QSKIP("SecureTransport: temporary keychain is not working on this version of macOS");
     QFETCH(const QString, location);
     QFETCH(const int, maxRedirects);
     QFETCH(const QNetworkReply::NetworkError, expectedError);
