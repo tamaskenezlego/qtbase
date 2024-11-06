@@ -881,6 +881,7 @@ void QWindows11Style::drawPrimitive(PrimitiveElement element, const QStyleOption
                 option->styleObject->setProperty("_q_inner_radius", option->styleObject->property("_q_end_radius"));
             int innerRadius = option->styleObject->property("_q_inner_radius").toFloat();
 
+            QPainterPath path;
             QRectF rect = option->rect;
             QPointF center = QPoint(rect.x() + rect.width() / 2, rect.y() + rect.height() / 2);
             rect.setWidth(15);
@@ -893,17 +894,13 @@ void QWindows11Style::drawPrimitive(PrimitiveElement element, const QStyleOption
 
             painter->setPen(Qt::NoPen);
             painter->setBrush(option->palette.accent());
-            if (option->state & State_MouseOver && option->state & State_Enabled)
-                painter->setBrush(QBrush(option->palette.accent().color().lighter(107)));
-            painter->drawEllipse(center, 7, 7);
+            path.addEllipse(center,7,7);
+            path.addEllipse(center,innerRadius,innerRadius);
+            painter->drawPath(path);
 
             painter->setPen(QPen(WINUI3Colors[colorSchemeIndex][frameColorStrong]));
             painter->setBrush(Qt::NoBrush);
             painter->drawEllipse(center, 7.5, 7.5);
-
-            painter->setPen(Qt::NoPen);
-            painter->setBrush(QBrush(option->palette.window()));
-            painter->drawEllipse(center,innerRadius, innerRadius);
 
             painter->setPen(QPen(WINUI3Colors[colorSchemeIndex][frameColorStrong]));
             painter->setBrush(Qt::NoBrush);
