@@ -693,7 +693,9 @@ void testCancelWhenMoved()
     promise2.start();
 
     // Move promises to local scope to test cancellation behavior
-    ThreadWrapper thr([p1 = std::move(promise1), p2 = std::move(promise2)] () mutable {
+    ThreadWrapper thr([&] {
+        auto p1 = std::move(promise1);
+        auto p2 = std::move(promise2);
         QThread::sleep(100ms);
         p1 = std::move(p2);
         p1.finish();  // this finish is for future #2
@@ -730,7 +732,8 @@ void tst_QPromise::waitUntilResumed()
     auto f = promise.future();
     f.suspend();
 
-    ThreadWrapper thr([p = std::move(promise)] () mutable {
+    ThreadWrapper thr([&] {
+        auto p = std::move(promise);
         p.suspendIfRequested();
         p.addResult(42);  // result added after suspend
         p.finish();
@@ -757,7 +760,8 @@ void tst_QPromise::waitUntilCanceled()
     auto f = promise.future();
     f.suspend();
 
-    ThreadWrapper thr([p = std::move(promise)] () mutable {
+    ThreadWrapper thr([&] {
+        auto p = std::move(promise);
         p.suspendIfRequested();
         p.addResult(42);  // result not added due to QFuture::cancel()
         p.finish();
