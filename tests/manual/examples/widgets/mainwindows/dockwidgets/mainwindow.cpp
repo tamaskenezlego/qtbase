@@ -27,6 +27,7 @@ MainWindow::MainWindow()
 
     newLetter();
     setUnifiedTitleAndToolBarOnMac(true);
+    setDockOptions((QMainWindow::DockOptions)(AllowNestedDocks | AllowTabbedDocks | GroupedDragging));
 }
 //! [1]
 

@@ -10,7 +10,7 @@ endif()
 
 set(INSTALL_EXAMPLEDIR "${INSTALL_EXAMPLESDIR}/widgets/mainwindows/dockwidgets")
 
-find_package(Qt6
+find_package(Qt6 6.8.1 CONFIG
     REQUIRED COMPONENTS Core Gui Widgets
     OPTIONAL_COMPONENTS PrintSupport
 )
